@@ -42,20 +42,22 @@ Coverage includes:
 
 ## Production status
 
-- remote `supabase db push --dry-run` — PASS; **only `202609160011_markdown_submission.sql` is pending**
-- existing hosted Phase-9 Edge smoke — PASS for `team-admin`, `operations-settings`, and `staff-secrets`
+Completed on 2026-09-17 KST:
 
-Production deployment is intentionally not performed yet because current ProjectDB main must first receive the compatibility changes. Deploying the ASC_WEB approval publisher before that integration could commit a valid portal report whose existing ProjectDB validation/Notion pipeline does not yet understand the new `source: asc_web` schema.
+- ProjectDB compatibility merged through PR #80; `main` is at `01b64c6` for the integration commit.
+- hosted migration `202609160011_markdown_submission.sql` applied successfully.
+- post-deploy `supabase db push --dry-run` reports the remote database is up to date.
+- hosted `submission-write` is ACTIVE v5; `submission-admin` is ACTIVE v4.
+- hosted Edge smoke passes for `team-admin`, `operations-settings`, and `staff-secrets` CORS/reachability.
+- ASC_WEB merged through PR #1; `main` is at `efeceec` for the portal integration commit.
+- GitHub Pages was enabled for workflow deployment and repository Variables were configured for the browser-safe Supabase URL/key plus `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`.
+- Pages run `35118540739` passed both build and deploy.
+- production browser smoke at `/ASC_WEB/member/login/` confirms JS/CSS/fonts/images load from the base path, the form activates, Supabase Auth OPTIONS reaches 200, and an intentional invalid-login POST reaches 400 and is rendered as a normal login failure.
 
-Expected release sequence:
+Still open:
 
-1. integrate ProjectDB compatibility changes;
-2. re-run ProjectDB tests;
-3. confirm ASC_WEB remote dry-run shows only migration 011 pending;
-4. apply migration 011;
-5. deploy changed `submission-write` and `submission-admin`;
-6. verify hosted CORS/reachability;
-7. run one controlled production ProjectDB-token Markdown approval;
-8. confirm generated `report-01.md`, immutable commit SHA and existing Notion sync.
+1. provision a least-privilege hosted `PROJECTDB_TOKEN` (repository and branch settings are already configured);
+2. run one controlled production Markdown approval;
+3. confirm generated ProjectDB `report-01.md`, immutable commit SHA, and existing Notion sync.
 
-Do not claim Phase 10 production publishing is live before steps 1–8 are complete.
+The currently authenticated GitHub CLI OAuth token was deliberately not reused as the long-lived Supabase `PROJECTDB_TOKEN` because it has broader organization/repository permissions than the documented least-privilege release boundary. Phase 10 UI/DB/functions are deployed, but end-to-end production ProjectDB publishing should not be declared verified until the three open steps above are complete.

@@ -15,7 +15,7 @@ Supabase Auth/Postgres/Edge Functions + existing ProjectDB Markdown reports. Exi
 - [x] **Phase 7: Final Operations Polish** — per-member password reset, deadline-first month calendar, free Google operations workspace settings
 - [x] **Phase 8: Resource Hub & Link Management** — Google handover metadata, generic staff/member links, member 자료실
 - [x] **Phase 9: Staff Shared Secrets** — 운영진 메모, Supabase Vault 기반 공용 계정 비밀정보, 감사 로그
-- [x] **Phase 10: Markdown Submission → ProjectDB Publish** — 회원 `.md` 업로드, 운영진 원문 검토, 개인/팀 ProjectDB 자동 게시 (local verified; coordinated release pending)
+- [x] **Phase 10: Markdown Submission → ProjectDB Publish** — 회원 `.md` 업로드, 운영진 원문 검토, 개인/팀 ProjectDB 자동 게시 (deployed; real ProjectDB write-token E2E pending)
 
 ## Phase Details
 
@@ -188,7 +188,7 @@ Supabase Auth/Postgres/Edge Functions + existing ProjectDB Markdown reports. Exi
 | 7. Final Operations Polish | Complete (local + hosted Supabase verified) | 2026-09-16 |
 | 8. Resource Hub & Link Management | Complete (local + hosted Supabase verified) | 2026-09-16 |
 | 9. Staff Shared Secrets | Complete (local + hosted Supabase verified) | 2026-09-16 |
-| 10. Markdown Submission → ProjectDB Publish | Complete locally; coordinated release pending | 2026-09-16 |
+| 10. Markdown Submission → ProjectDB Publish | Deployed; real ProjectDB write-token E2E pending | 2026-09-17 |
 
 ## Current Release Gates
 
@@ -205,4 +205,4 @@ Current verified evidence:
 - `git diff --check` — passing
 - final `supabase db push --dry-run` — remote database up to date
 
-Hosted Supabase remains intentionally at migrations 001–010 / the Phase-9 Edge-function set until ProjectDB Phase-10 compatibility changes are integrated. Migration 011 and changed `submission-write`/`submission-admin` are local-verified but not production-deployed yet. Public GitHub Pages deployment, ProjectDB compatibility integration, controlled production ProjectDB write-token validation, entering real shared organization credentials, external resource permission setup, and git push/PR remain separate release/operator actions.
+ProjectDB compatibility is merged through PR #80. Hosted Supabase is current through migration 011 with `submission-write` v5 and `submission-admin` v4 active. ASC_WEB is merged through PR #1 and GitHub Pages is deployed successfully under `/ASC_WEB/`; production browser smoke confirms base-path assets and Supabase Auth reachability. The remaining Phase-10 release gate is a least-privilege hosted `PROJECTDB_TOKEN` plus one controlled approval/publish check. Entering real shared organization credentials, external resource permission setup, step-up reveal authentication, and final production Auth setting inspection remain separate operator actions.
