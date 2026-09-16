@@ -1,7 +1,7 @@
 # ASC Staff Shared Secrets Design
 
 **Date:** 2026-09-16
-**Status:** Chat design approved; written spec pending final user review
+**Status:** Implemented and locally/hosted verified (2026-09-16)
 
 ## Goal
 

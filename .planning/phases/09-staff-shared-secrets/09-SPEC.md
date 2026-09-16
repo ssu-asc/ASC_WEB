@@ -1,6 +1,6 @@
 # Phase 9 Spec — Staff Shared Secrets
 
-**Status:** Design approved in chat; written spec pending final review
+**Status:** Implemented, locally verified, and hosted Supabase backend deployed (2026-09-16)
 
 ## Objective
 

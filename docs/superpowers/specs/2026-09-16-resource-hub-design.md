@@ -1,7 +1,7 @@
 # ASC Resource Hub & Link Management Design
 
 **Date:** 2026-09-16
-**Status:** Chat design approved; written spec pending final user review
+**Status:** Implemented and verified locally + hosted Supabase (2026-09-16)
 
 ## Goal
 

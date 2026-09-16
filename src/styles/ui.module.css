@@ -1074,6 +1074,14 @@
   }
 }
 
+/* Keep the added Member link clear of Apply Us on narrow desktop widths. */
+@media (min-width: 721px) and (max-width: 1100px) {
+  .header_left .logo { margin-right: 24px; }
+  .header_left .menus { gap: 14px; white-space: nowrap; }
+  .header_wrap .header_left { width: calc(100% - 150px); }
+  .header_wrap .header_right { width: 150px; }
+}
+
 @media (max-width: 720px) {
 
 
