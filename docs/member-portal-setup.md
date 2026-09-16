@@ -423,7 +423,7 @@ git diff --check
 
 현재 주요 검증 범위:
 
-- local migration 001–011 실제 적용 (production은 ProjectDB 호환 변경 통합 전까지 001–010 유지)
+- local migration 001–011 실제 적용 + production migration 011 배포 완료
 - Auth 로그인 / RLS
 - 마지막 활성 운영진 보호 및 동시성
 - `member-admin` 단일 계정 작업 + 서버 생성 임시 비밀번호 초기화 후 실제 재로그인
@@ -446,6 +446,8 @@ git diff --check
 - browser direct secret table/audit/RPC/Vault 접근 차단
 
 ## 운영 배포 체크
+
+2026-09-17 기준 ProjectDB 호환 변경(PR #80), migration 011, `submission-write`/`submission-admin`, ASC_WEB PR #1, GitHub Pages `/ASC_WEB/` 배포까지 완료했다. `PROJECTDB_REPOSITORY=ssu-asc/ProjectDB`, `PROJECTDB_BRANCH=main`은 hosted Supabase에 설정되어 있다. 남은 Phase-10 배포 게이트는 least-privilege `PROJECTDB_TOKEN` 설정과 실제 승인 1건의 ProjectDB/Notion E2E 확인이다.
 
 1. Auth public sign-up이 꺼져 있는가.
 2. Phase 10 release 전 ProjectDB `source: asc_web` validator/Notion 호환 변경이 먼저 통합됐는가.

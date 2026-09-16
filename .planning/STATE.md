@@ -2,11 +2,11 @@
 
 ## Current Position
 
-**GSD Core Phases 1–9 are deployed/verified; Phase 10 is implemented and local-verified as of 2026-09-16.**
+**GSD Core Phases 1–9 are deployed/verified; Phase 10 code, ProjectDB compatibility, migration 011, submission Edge Functions, repository integration, and GitHub Pages deployment are live as of 2026-09-17.**
 
-The current working tree contains the complete Member operations portal plus Phase-10 Markdown upload submission: members select one `.md` report, staff inspect the exact stored source, and approval generates trusted individual/team ProjectDB reports. Resource hub, global staff memo, and Vault-backed shared staff credentials remain intact.
+The deployed Member operations portal includes Phase-10 Markdown upload submission: members select one `.md` report, staff inspect the exact stored source, and approval generates trusted individual/team ProjectDB reports. Resource hub, global staff memo, and Vault-backed shared staff credentials remain intact.
 
-Hosted Supabase intentionally remains on migrations `001–010` / the Phase-9 Edge-function versions until the ProjectDB Phase-10 compatibility changes are integrated. Migration 011 and changed submission functions are local-verified but are not production-deployed yet.
+ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration `202609160011` plus updated `submission-write` and `submission-admin` are deployed. ASC_WEB itself landed through PR #1 and GitHub Pages is live under `/ASC_WEB/` with browser-safe Supabase repository Variables and `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`. The only Phase-10 production publishing gate still open is provisioning a least-privilege `PROJECTDB_TOKEN` and running one controlled approval/publish test.
 
 ## Delivered
 
@@ -104,9 +104,10 @@ Remote migration history is current through:
 202609160008
 202609160009
 202609160010
+202609160011
 ```
 
-A final `supabase db push --dry-run` reports the remote database is up to date.
+A post-deploy `supabase db push --dry-run` reports the remote database is up to date.
 
 Active hosted Edge Functions:
 
@@ -114,8 +115,8 @@ Active hosted Edge Functions:
 - `member-bulk`
 - `team-admin`
 - `assignment-admin`
-- `submission-write`
-- `submission-admin`
+- `submission-write` — ACTIVE v5
+- `submission-admin` — ACTIVE v4
 - `operations-settings` — ACTIVE v4
 - `staff-secrets` — ACTIVE v1
 
@@ -130,9 +131,13 @@ Latest local evidence for Phase 10:
 - `npm run build` — PASS, Next 15.5.25 static export, **20 pages**
 - `npm run test:browser` — **14/14 PASS**
 - `npm run test:integration` — PASS with disposable local Supabase, migrations `001–011`, Auth/PostgREST/RLS/Edge Functions, Markdown individual/team submission and real local Vault operations
-- ProjectDB isolated worktree: `python3 -m unittest discover -s tests -v` — **23 passing**
+- ProjectDB compatibility branch/main: `python3 -m unittest discover -s tests -v` — **23 passing**
 - `git diff --check` — PASS for ASC_WEB gate
-- hosted Supabase remains at Phase 9 pending coordinated ProjectDB integration; existing hosted Edge smoke remains Phase-9 verified
+- hosted Supabase migration 011 — DEPLOYED; post-deploy dry-run reports up to date
+- hosted `submission-write` v5 / `submission-admin` v4 — ACTIVE
+- hosted Edge smoke — PASS for `team-admin`, `operations-settings`, and `staff-secrets`
+- GitHub Pages run `35118540739` — build/deploy PASS after enabling Pages and setting `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`
+- production browser smoke — `/ASC_WEB/member/login/` assets load with 200 responses; Supabase Auth preflight reaches 200 and an intentional invalid-login POST reaches 400 with normal UI error handling
 
 Integration coverage includes:
 - issued Auth accounts and RLS
@@ -161,15 +166,12 @@ Next remains on the 15.5 patch line. The known transitive PostCSS advisory that 
 
 ## Remaining Release Boundary
 
-Not performed for the coordinated Phase-10 release:
-- integrate the isolated ProjectDB validator/Notion compatibility changes before enabling Phase-10 production approval publishing
-- production deployment of migration 011 and updated `submission-write` / `submission-admin`
-- controlled real ProjectDB write-token approval/publish test
-- public GitHub Pages deployment of this working tree
+Still not performed:
+- provision a least-privilege `PROJECTDB_TOKEN` in hosted Supabase and run one controlled real approval/publish test
+- confirm the resulting ProjectDB `report-01.md`, immutable commit SHA, and existing Notion sync end-to-end
 - entering real ASC organization passwords/tokens into the Vault UI
 - actual Notion/Google/GitHub/Discord sharing/ownership administration
 - step-up MFA/re-authentication before shared-secret reveal
 - final production Auth setting inspection if not already confirmed in Dashboard
-- git integration of the full working tree (commit/push/PR/merge)
 
 Follow `docs/member-portal-setup.md` for the current operator checklist.

@@ -1,6 +1,6 @@
 # Phase 10 Summary — Markdown Upload → ProjectDB Publish
 
-## Delivered locally
+## Delivered
 
 ### Member submission
 
@@ -28,7 +28,7 @@
 
 ### ProjectDB compatibility
 
-The isolated ProjectDB worktree:
+The ProjectDB compatibility change set, now merged through PR #80:
 
 - keeps all legacy required fields/validation unchanged;
 - accepts `source: asc_web` individual/team reports without fabricated CL/contribution metadata;
@@ -40,6 +40,8 @@ The isolated ProjectDB worktree:
 
 No new object storage, VPS, report repository or paid service is introduced. Draft Markdown stays in existing Supabase Postgres; approved reports stay in the existing GitHub ProjectDB.
 
-## Release dependency
+## Production rollout
 
-Phase 10 production deployment is intentionally held until the ProjectDB compatibility changes are integrated. Hosted Supabase remains on migrations 001–010 and the Phase-9 submission-function versions. After ProjectDB integration, migration 011 and the updated `submission-write`/`submission-admin` can be deployed together and verified with one controlled real ProjectDB-token approval.
+ProjectDB compatibility is merged, hosted Supabase migration 011 is applied, updated `submission-write` / `submission-admin` are active, ASC_WEB is merged through PR #1, and GitHub Pages is deployed under `/ASC_WEB/` with browser-safe Supabase Variables and the correct base path. Production browser smoke confirms assets and Supabase Auth reachability.
+
+The only Phase-10 verification gap is the real write path: hosted Supabase still needs a least-privilege `PROJECTDB_TOKEN`, followed by one controlled approval to confirm the generated `report-01.md`, immutable commit SHA, and existing Notion sync end-to-end.
