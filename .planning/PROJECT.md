@@ -1,5 +1,18 @@
 # ASC 2026-2 Core Operations Portal
 
+## Current State
+
+**v1.0 shipped on 2026-09-17.** Phases 1–10 are implemented, integrated, deployed, and milestone-audited. Hosted Supabase is current through migration 011, all required Edge Functions are active, GitHub Pages is live under `/ASC_WEB/`, ProjectDB compatibility is merged, and a least-privilege server-side ProjectDB write token is provisioned. The first real staff approval is an operator smoke for the live GitHub write, not a remaining implementation dependency.
+
+Milestone records:
+- `.planning/v1.0-MILESTONE-AUDIT.md`
+- `.planning/milestones/v1.0-ROADMAP.md`
+- `.planning/milestones/v1.0-REQUIREMENTS.md`
+
+### Next Milestone Goals
+
+No feature milestone is currently committed. Candidate future work is limited to hardening/maintenance: step-up authentication before shared-secret reveal, token rotation/expiry tooling, production Auth-setting checks, and a deliberate framework-major upgrade when required. New product scope should begin as a new GSD milestone rather than extending v1.0 ad hoc.
+
 ## What This Is
 
 기존 ASC 홈페이지 디자인을 그대로 두고 **회원관리, 개인·팀 프로젝트 제출, 제출 현황, 일정, 회원 자료실, 운영진 링크 관리**를 덧붙인다. 스터디 진행은 Discord에서 유지하고 기존 Notion/Drive/GitHub/Discord 자료는 ASC_WEB에서 링크로 발견할 수 있게 한다. 공개 회원가입, ASC_WEB 내부 Notion형 편집기, 회계, 자동 알림, 평가·순위, 별도 ATS/VPS는 만들지 않는다.

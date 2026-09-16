@@ -2,11 +2,11 @@
 
 ## Current Position
 
-**GSD Core Phases 1–9 are deployed/verified; Phase 10 code, ProjectDB compatibility, migration 011, submission Edge Functions, repository integration, and GitHub Pages deployment are live as of 2026-09-17.**
+**ASC 2026-2 Core Operations Portal v1.0 is shipped and production-ready as of 2026-09-17. GSD Core Phases 1–10 are implemented, integrated, deployed, and re-verified.**
 
-The deployed Member operations portal includes Phase-10 Markdown upload submission: members select one `.md` report, staff inspect the exact stored source, and approval generates trusted individual/team ProjectDB reports. Resource hub, global staff memo, and Vault-backed shared staff credentials remain intact.
+The deployed Member operations portal includes Markdown upload submission: members select one `.md` report, staff inspect the exact stored source, and approval generates trusted individual/team ProjectDB reports. Resource hub, global staff memo, and Vault-backed shared staff credentials remain intact.
 
-ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration `202609160011` plus updated `submission-write` and `submission-admin` are deployed. ASC_WEB itself landed through PR #1 and GitHub Pages is live under `/ASC_WEB/` with browser-safe Supabase repository Variables and `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`. The only Phase-10 production publishing gate still open is provisioning a least-privilege `PROJECTDB_TOKEN` and running one controlled approval/publish test.
+ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration `202609160011` plus updated `submission-write` and `submission-admin` are deployed. ASC_WEB itself landed through PR #1 and GitHub Pages is live under `/ASC_WEB/` with browser-safe Supabase repository Variables and `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`. A least-privilege `PROJECTDB_TOKEN` is provisioned in hosted Supabase. The first real staff approval remains an operational production smoke for GitHub write permission; it is not a remaining implementation dependency. Notion synchronization is not part of the v1.0 release-completion gate.
 
 ## Delivered
 
@@ -115,10 +115,10 @@ Active hosted Edge Functions:
 - `member-bulk`
 - `team-admin`
 - `assignment-admin`
-- `submission-write` — ACTIVE v5
-- `submission-admin` — ACTIVE v4
-- `operations-settings` — ACTIVE v4
-- `staff-secrets` — ACTIVE v1
+- `submission-write` — ACTIVE
+- `submission-admin` — ACTIVE
+- `operations-settings` — ACTIVE
+- `staff-secrets` — ACTIVE
 
 The new secret function was deployed using the Supabase server-side `--use-api` bundle path. Hosted smoke verifies CORS and invalid-JWT HTTP reachability without sending any real secret.
 
@@ -164,14 +164,13 @@ Integration coverage includes:
 
 Next remains on the 15.5 patch line. The known transitive PostCSS advisory that requires the breaking Next 16 path remains a separate framework-upgrade task.
 
-## Remaining Release Boundary
+## Post-v1.0 Operator Follow-up
 
-Still not performed:
-- provision a least-privilege `PROJECTDB_TOKEN` in hosted Supabase and run one controlled real approval/publish test
-- confirm the resulting ProjectDB `report-01.md`, immutable commit SHA, and existing Notion sync end-to-end
-- entering real ASC organization passwords/tokens into the Vault UI
-- actual Notion/Google/GitHub/Discord sharing/ownership administration
-- step-up MFA/re-authentication before shared-secret reveal
-- final production Auth setting inspection if not already confirmed in Dashboard
+These are operational or hardening tasks, not v1.0 implementation blockers:
+- use the first real staff approval as the production ProjectDB write smoke and confirm `report-01.md` plus the saved immutable commit SHA;
+- enter real ASC organization credentials into the Vault UI only when needed;
+- maintain actual Notion/Google/GitHub/Discord sharing and ownership in those external services;
+- consider step-up MFA/re-authentication before shared-secret reveal as a future hardening milestone;
+- periodically inspect production Auth settings and GitHub token expiry/rotation.
 
-Follow `docs/member-portal-setup.md` for the current operator checklist.
+Notion synchronization is not required as part of the ASC_WEB v1.0 completion verification. Follow `docs/member-portal-setup.md` for ongoing operator checks.

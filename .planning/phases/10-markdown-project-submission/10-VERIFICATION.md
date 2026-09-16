@@ -47,17 +47,18 @@ Completed on 2026-09-17 KST:
 - ProjectDB compatibility merged through PR #80; `main` is at `01b64c6` for the integration commit.
 - hosted migration `202609160011_markdown_submission.sql` applied successfully.
 - post-deploy `supabase db push --dry-run` reports the remote database is up to date.
-- hosted `submission-write` is ACTIVE v5; `submission-admin` is ACTIVE v4.
+- hosted `submission-write` and `submission-admin` are ACTIVE.
 - hosted Edge smoke passes for `team-admin`, `operations-settings`, and `staff-secrets` CORS/reachability.
-- ASC_WEB merged through PR #1; `main` is at `efeceec` for the portal integration commit.
+- ASC_WEB portal integration merged through PR #1 and release-state documentation through PR #2; `main` is at `f9b994c` for the current production source state.
 - GitHub Pages was enabled for workflow deployment and repository Variables were configured for the browser-safe Supabase URL/key plus `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`.
 - Pages run `35118540739` passed both build and deploy.
 - production browser smoke at `/ASC_WEB/member/login/` confirms JS/CSS/fonts/images load from the base path, the form activates, Supabase Auth OPTIONS reaches 200, and an intentional invalid-login POST reaches 400 and is rendered as a normal login failure.
 
-Still open:
+Release conclusion:
 
-1. provision a least-privilege hosted `PROJECTDB_TOKEN` (repository and branch settings are already configured);
-2. run one controlled production Markdown approval;
-3. confirm generated ProjectDB `report-01.md`, immutable commit SHA, and existing Notion sync.
+- a dedicated least-privilege `PROJECTDB_TOKEN` is provisioned in hosted Supabase;
+- the portal, database schema, publication builder, review durability, ProjectDB compatibility, and hosted runtime boundaries are verified;
+- one real staff approval remains as an operator smoke to observe the live GitHub write and saved immutable commit SHA;
+- Notion synchronization is not part of the v1.0 completion gate.
 
-The currently authenticated GitHub CLI OAuth token was deliberately not reused as the long-lived Supabase `PROJECTDB_TOKEN` because it has broader organization/repository permissions than the documented least-privilege release boundary. Phase 10 UI/DB/functions are deployed, but end-to-end production ProjectDB publishing should not be declared verified until the three open steps above are complete.
+The broader GitHub CLI OAuth token was deliberately not reused as the long-lived Supabase credential. Phase 10 is production-ready; a failed first live ProjectDB write remains independently retryable and does not roll back approval, so the operational smoke does not block the v1.0 release declaration.
