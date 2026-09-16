@@ -1,8 +1,8 @@
 {
-  "isOpen": false,
-  "startTime": "2026-03-02T00:00:00+09:00",
-  "endTime": "2026-03-09T00:00:00+09:00",
-  "applyLink" : "https://docs.google.com/forms/d/e/1FAIpQLScn-7wYSuvIVuduNoDdjgRihmsMHNGmXK_r5zqAMvqv3LrwkA/viewform?usp=header",
+  "isOpen": true,
+  "startTime": "2026-09-07T00:00:00+09:00",
+  "endTime": "2026-09-10T23:59:59.999+09:00",
+  "applyLink" : "https://forms.gle/3Q8YXF1C5cPPUW3T8",
   "ctfLink" : "",
   "resultLink" : ""
 }

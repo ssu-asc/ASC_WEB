@@ -81,6 +81,7 @@ export default function Header() {
                             <div className={ui_styles.menu}><Link href={"/hall-of-fame"}>Hall of Fame</Link></div>
                             <div className={ui_styles.menu}><Link href={"https://ssu-asc.github.io/blog"}>Blog</Link></div>
                             <div className={ui_styles.menu}><Link href={"/qna"}>Q&A</Link></div>
+                            <div className={ui_styles.menu}><Link href={"/member"}>Member</Link></div>
                         </div>
                     </div>
                     <div className={ui_styles.header_right}>
@@ -112,6 +113,7 @@ export default function Header() {
 
 
                         <div className={ui_styles.menu_btn}><Link href={"/qna"} onClick={() => { closeMenu() }}>Q&A</Link></div>
+                        <div className={ui_styles.menu_btn}><Link href={"/member"} onClick={() => { closeMenu() }}>Member</Link></div>
 
 
                         <DefaultBtn

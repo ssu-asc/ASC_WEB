@@ -1,0 +1,20 @@
+{
+  "mode": "interactive",
+  "runtime": "codex",
+  "model_profile": "balanced",
+  "resolve_model_ids": false,
+  "granularity": "standard",
+  "parallelization": false,
+  "commit_docs": false,
+  "response_language": "ko",
+  "workflow": {
+    "research": false,
+    "plan_check": true,
+    "verifier": true,
+    "use_worktrees": false,
+    "auto_advance": false
+  },
+  "git": {
+    "branching_strategy": "none"
+  }
+}

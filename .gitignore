@@ -13,6 +13,10 @@
 # testing
 /coverage
 
+# local Supabase CLI state/secrets
+/supabase/.temp/
+/supabase/.branches/
+
 # next.js
 /.next/
 /out/
@@ -30,8 +34,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files: only public templates belong in git
 .env*
+!.env.example
+/ops/outline/
 
 # vercel
 .vercel

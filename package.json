@@ -6,9 +6,15 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:browser": "node tests/member-browser.mjs",
+    "test:integration": "node tests/live-supabase.mjs",
+    "test:edge": "node tests/live-edge-smoke.mjs",
+    "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.116.0",
     "gsap": "^3.12.7",
     "next": "^15.5.12",
     "react": "^19.0.0",

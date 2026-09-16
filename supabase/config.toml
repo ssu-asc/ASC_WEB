@@ -1,0 +1,23 @@
+[functions.member-admin]
+verify_jwt = true
+
+[functions.submission-write]
+verify_jwt = true
+
+[functions.submission-admin]
+verify_jwt = true
+
+[functions.team-admin]
+verify_jwt = true
+
+[functions.assignment-admin]
+verify_jwt = true
+
+[functions.member-bulk]
+verify_jwt = true
+
+[functions.operations-settings]
+verify_jwt = true
+
+[functions.staff-secrets]
+verify_jwt = true
