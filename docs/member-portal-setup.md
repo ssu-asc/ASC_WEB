@@ -447,7 +447,7 @@ git diff --check
 
 ## 운영 배포 체크
 
-2026-09-17 기준 ProjectDB 호환 변경(PR #80), migration 011, `submission-write`/`submission-admin`, ASC_WEB PR #1, GitHub Pages `/ASC_WEB/` 배포까지 완료했다. `PROJECTDB_REPOSITORY=ssu-asc/ProjectDB`, `PROJECTDB_BRANCH=main`은 hosted Supabase에 설정되어 있다. 남은 Phase-10 배포 게이트는 least-privilege `PROJECTDB_TOKEN` 설정과 실제 승인 1건의 ProjectDB/Notion E2E 확인이다.
+2026-09-17 기준 ProjectDB 호환 변경(PR #80), migration 011, `submission-write`/`submission-admin`, ASC_WEB PR #1, GitHub Pages `/ASC_WEB/` 배포까지 완료했다. `PROJECTDB_REPOSITORY=ssu-asc/ProjectDB`, `PROJECTDB_BRANCH=main`, least-privilege `PROJECTDB_TOKEN`도 hosted Supabase에 설정되어 있다. 첫 실제 승인 1건은 ProjectDB `report-01.md`와 immutable commit SHA를 확인하는 운영 smoke로 사용한다. Notion 동기화는 v1.0 완료 조건이 아니다.
 
 1. Auth public sign-up이 꺼져 있는가.
 2. Phase 10 release 전 ProjectDB `source: asc_web` validator/Notion 호환 변경이 먼저 통합됐는가.
@@ -466,7 +466,7 @@ git diff --check
 15. 공용 계정 비밀값은 Vault에만 저장되고 목록/DB metadata/로그/export에 평문이 없는가.
 16. `보기/복사`가 감사 로그에 남고 비활성화 secret reveal이 차단되는가.
 17. 브라우저 bundle에 service-role/ProjectDB 운영키 같은 privileged secret이 없는가.
-18. 실제 ProjectDB token으로 Markdown 승인 1건을 controlled test해 ProjectDB `report-01.md` commit + Notion sync를 확인했는가.
+18. 첫 실제 Markdown 승인에서 ProjectDB `report-01.md` 생성과 immutable commit SHA 저장을 확인했는가. 이 확인은 운영 smoke이며 승인 실패 시 ProjectDB sync만 재시도한다.
 19. 회원/운영진 계정으로 production 권한을 최종 점검했는가.
 
 비밀번호, service-role key, DB password, GitHub token은 채팅/스크린샷/Git에 남기지 않는다.

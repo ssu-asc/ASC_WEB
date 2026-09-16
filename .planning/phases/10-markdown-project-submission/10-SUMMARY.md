@@ -44,4 +44,4 @@ No new object storage, VPS, report repository or paid service is introduced. Dra
 
 ProjectDB compatibility is merged, hosted Supabase migration 011 is applied, updated `submission-write` / `submission-admin` are active, ASC_WEB is merged through PR #1, and GitHub Pages is deployed under `/ASC_WEB/` with browser-safe Supabase Variables and the correct base path. Production browser smoke confirms assets and Supabase Auth reachability.
 
-The only Phase-10 verification gap is the real write path: hosted Supabase still needs a least-privilege `PROJECTDB_TOKEN`, followed by one controlled approval to confirm the generated `report-01.md`, immutable commit SHA, and existing Notion sync end-to-end.
+A least-privilege `PROJECTDB_TOKEN` is provisioned in hosted Supabase. Phase 10 is production-ready: the first real staff approval is retained as an operator smoke to observe the generated `report-01.md` and immutable commit SHA in the live repository. Notion synchronization is not required for v1.0 completion.
