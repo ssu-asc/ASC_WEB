@@ -11,7 +11,7 @@ test('static member routes and a setup guide exist', () => {
     'src/app/member/layout.tsx', 'src/app/member/page.tsx', 'src/app/member/login/page.tsx',
     'src/app/member/password/page.tsx', 'src/app/member/submission/page.tsx',
     'src/app/member/schedule/page.tsx', 'src/app/member/resources/page.tsx', 'src/app/member/operations/members/page.tsx',
-    'src/app/member/operations/submissions/page.tsx', 'src/app/member/operations/teams/page.tsx',
+    'src/app/member/operations/progress/page.tsx', 'src/app/member/operations/submissions/page.tsx', 'src/app/member/operations/teams/page.tsx',
     'src/app/member/operations/settings/page.tsx', 'docs/member-portal-setup.md',
   ]) {
     assert.ok(read(path).length > 100, `${path} must contain an implementation`);
@@ -390,9 +390,11 @@ test('member auth provider is scoped to member routes, not public root layout', 
   assert.doesNotMatch(read('src/app/layout.tsx'), /MemberSessionProvider|supabase/);
 });
 
-test('member toolbar separates staff operations while exposing the shared resource hub', () => {
+test('member toolbar separates overall and round-first staff views while exposing the shared resource hub', () => {
   const toolbar = read('src/component/member/MemberToolbar.tsx');
-  assert.match(toolbar, /프로젝트 현황/);
+  assert.match(toolbar, /전체 현황/);
+  assert.match(toolbar, /회차별 현황/);
+  assert.match(toolbar, /\/member\/operations\/progress/);
   assert.match(toolbar, /팀 관리/);
   assert.match(toolbar, /회원 관리/);
   assert.match(toolbar, /내 프로젝트/);
@@ -466,6 +468,14 @@ test('staff review previews the exact uploaded markdown as escaped text', () => 
   assert.doesNotMatch(page, /dangerouslySetInnerHTML|<iframe/);
 });
 
+test('team management supports inline team and membership edits', () => {
+  const page = read('src/app/member/operations/teams/page.tsx');
+  for (const label of ['팀원 수정', '회원 추가 / 이동', '빼기', '이름 저장']) assert.match(page, new RegExp(label));
+  assert.match(page, /rename_team/);
+  assert.match(page, /assign_member/);
+  assert.match(page, /remove_member/);
+});
+
 test('staff submission operations are round-first and surface late plus unassigned state', () => {
   const api = read('src/lib/member-api.ts');
   assert.match(api, /computeProjectRoundOverview/);
@@ -477,13 +487,24 @@ test('staff submission operations are round-first and surface late plus unassign
   assert.doesNotMatch(page, /row\.profile\.member_id/);
 });
 
-test('member dashboard is action-first and staff are redirected to operations', () => {
+test('staff overall progress view aggregates individual and team work by member', () => {
+  const api = read('src/lib/member-api.ts');
+  const domain = read('src/lib/member-domain.ts');
+  const page = read('src/app/member/operations/progress/page.tsx');
+  assert.match(api, /computeMemberProjectProgress/);
+  assert.match(domain, /export function computeMemberProjectProgress/);
+  for (const label of ['전체 현황', '부원별 프로젝트 진행', '개인 프로젝트', '팀 프로젝트', '개인 미제출', '팀 확인 필요']) assert.match(page, new RegExp(label));
+  assert.match(page, /memberProgress/);
+  assert.match(page, /overall_state/);
+});
+
+test('member dashboard is action-first and staff are redirected to the overall progress view', () => {
   const page = read('src/app/member/page.tsx');
   assert.match(page, /지금 할 프로젝트/);
   assert.match(page, /다음 프로젝트/);
   assert.match(page, /지난 프로젝트/);
   assert.match(page, /groupDashboardItems/);
-  assert.match(page, /router\.replace\(["']\/member\/operations\/submissions["']\)/);
+  assert.match(page, /router\.replace\(["']\/member\/operations\/progress["']\)/);
 });
 
 test('member portal native form controls explicitly use a dark color scheme', () => {
@@ -521,11 +542,14 @@ test('bulk member administration is privileged, row-scoped, and can return one-t
   assert.match(api, /["']member-bulk["']/);
 });
 
-test('member management is an editable spreadsheet with explicit batch save', () => {
+test('member management is a simplified editable spreadsheet with explicit batch save', () => {
   const component = read('src/component/member/MemberSpreadsheet.tsx');
   assert.ok(component.length > 1000, 'spreadsheet component must exist');
   for (const label of ['행 추가', '붙여넣기', '가져오기', '내보내기', '변경사항 저장']) assert.match(component, new RegExp(label));
-  for (const label of ['로그인 아이디', '이름', '권한', '이번 학기 활동', 'GitHub', '계정 상태']) assert.match(component, new RegExp(label));
+  for (const label of ['로그인 아이디', '이름', '권한', '비밀번호 초기화']) assert.match(component, new RegExp(label));
+  assert.doesNotMatch(component, />이번 학기 활동</);
+  assert.doesNotMatch(component, />GitHub</);
+  assert.doesNotMatch(component, />계정 상태</);
   assert.match(component, /applyMemberBatch/);
   assert.match(component, /parseTabularPaste/);
   assert.match(component, /validateSpreadsheetRows/);

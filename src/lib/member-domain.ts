@@ -105,6 +105,27 @@ export interface SubmissionOverviewRow {
   state: DisplayState;
   submission: Submission | null;
 }
+
+export interface MemberProjectProgressBucket {
+  expected: number;
+  submitted: number;
+  approved: number;
+  revision_requested: number;
+  missing: number;
+  upcoming: number;
+  late: number;
+  unassigned: number;
+}
+
+export type MemberProjectProgressState = "complete" | "waiting" | "revision" | "missing" | "unassigned" | "none";
+
+export interface MemberProjectProgressRow {
+  profile: Profile;
+  team: Team | null;
+  individual: MemberProjectProgressBucket;
+  team_projects: MemberProjectProgressBucket;
+  overall_state: MemberProjectProgressState;
+}
 export interface DashboardItem {
   assignment: Assignment;
   state: DisplayState;
@@ -346,6 +367,70 @@ export function computeSubmissionOverview(input: {
     }
   }
   return rows;
+}
+
+function emptyProgressBucket(): MemberProjectProgressBucket {
+  return { expected: 0, submitted: 0, approved: 0, revision_requested: 0, missing: 0, upcoming: 0, late: 0, unassigned: 0 };
+}
+
+function summarizeProjectRows(rows: SubmissionOverviewRow[], now = new Date()): MemberProjectProgressBucket {
+  const bucket = emptyProgressBucket();
+  for (const row of rows) {
+    if (row.state === "not_required") continue;
+    bucket.expected += 1;
+    if (row.submission) {
+      bucket.submitted += 1;
+      if (isLateSubmission(row.submission, row.assignment)) bucket.late += 1;
+    }
+    if (row.state === "approved") bucket.approved += 1;
+    if (row.state === "revision_requested") bucket.revision_requested += 1;
+    if (row.state === "not_submitted") {
+      if (projectWindowState(row.assignment, now) === "upcoming") bucket.upcoming += 1;
+      else bucket.missing += 1;
+    }
+    if (row.state === "not_assigned") bucket.unassigned += 1;
+  }
+  return bucket;
+}
+
+export function computeMemberProjectProgress(input: {
+  semester: string;
+  profiles: Profile[];
+  memberships: SemesterMembership[];
+  assignments: Assignment[];
+  teams: Team[];
+  teamMembers: TeamMember[];
+  submissions: Submission[];
+  now?: Date;
+}): MemberProjectProgressRow[] {
+  const rows = computeSubmissionOverview(input);
+  const now = input.now ?? new Date();
+  const membershipByProfile = new Map(input.memberships.filter((membership) => membership.semester === input.semester).map((membership) => [membership.profile_id, membership]));
+  const teamById = new Map(input.teams.filter((team) => team.semester === input.semester).map((team) => [team.id, team]));
+  const teamLinkByProfile = new Map(input.teamMembers.filter((link) => link.semester === input.semester).map((link) => [link.profile_id, link.team_id]));
+
+  return input.profiles
+    .filter((profile) => profile.role === "member" && profile.active && membershipByProfile.get(profile.id)?.active === true)
+    .map((profile) => {
+      const memberRows = rows.filter((row) => row.profile.id === profile.id);
+      const individual = summarizeProjectRows(memberRows.filter((row) => row.assignment.project_type === "individual"), now);
+      const teamProjects = summarizeProjectRows(memberRows.filter((row) => row.assignment.project_type === "team"), now);
+      const teamId = teamLinkByProfile.get(profile.id);
+      const team = teamId ? teamById.get(teamId) ?? null : null;
+      let overallState: MemberProjectProgressState = "none";
+      if (individual.expected + teamProjects.expected > 0) {
+        if (teamProjects.unassigned > 0) overallState = "unassigned";
+        else if (individual.missing + teamProjects.missing > 0) overallState = "missing";
+        else if (individual.revision_requested + teamProjects.revision_requested > 0) overallState = "revision";
+        else if (individual.approved + teamProjects.approved === individual.expected + teamProjects.expected) overallState = "complete";
+        else overallState = "waiting";
+      }
+      return { profile, team, individual, team_projects: teamProjects, overall_state: overallState };
+    })
+    .sort((a, b) => {
+      const rank: Record<MemberProjectProgressState, number> = { unassigned: 0, missing: 1, revision: 2, waiting: 3, none: 4, complete: 5 };
+      return rank[a.overall_state] - rank[b.overall_state] || a.profile.name.localeCompare(b.profile.name, "ko");
+    });
 }
 
 export interface ProjectRoundSummary {

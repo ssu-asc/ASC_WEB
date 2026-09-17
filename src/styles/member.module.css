@@ -103,6 +103,12 @@
 .memberPicker small { display: block; margin-top: 3px; color: rgba(255,255,255,.45); }
 .memberChips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .memberChips span { padding: 7px 10px; border: 1px solid rgba(255,255,255,.15); border-radius: 999px; color: rgba(255,255,255,.72); font-size: 12px; }
+.teamMemberEditor { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--award-border); }
+.teamMemberEditor > strong { display: block; margin-bottom: 10px; font-size: 14px; }
+.teamMemberRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+.teamMemberRow span { min-width: 0; font-size: 14px; }
+.teamMemberRow small { display: block; margin-top: 4px; color: rgba(255,255,255,.45); font-size: 11px; }
+.teamMemberEditor .field { margin-top: 16px; }
 .reviewNote { margin-top: 22px; padding: 16px; border-left: 3px solid var(--main-color); background: rgba(255,255,255,.04); }
 .reviewNote p { margin-top: 8px; color: rgba(255,255,255,.68); line-height: 1.7; }
 .tableWrap { width: 100%; overflow: visible; }
@@ -117,6 +123,18 @@
 .statsGrid div { padding: 18px; border: 1px solid var(--award-border); border-radius: 12px; background: var(--team-activity-bg); }
 .statsGrid strong { display: block; font-size: 26px; }
 .statsGrid span { display: block; margin-top: 7px; color: rgba(255,255,255,.5); font-size: 12px; }
+.progressStats { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 10px; margin: 30px 0; }
+.progressStats div { padding: 18px; border: 1px solid var(--award-border); border-radius: 12px; background: var(--team-activity-bg); }
+.progressStats strong { display: block; font-size: 26px; }
+.progressStats span { display: block; margin-top: 7px; color: rgba(255,255,255,.5); font-size: 12px; }
+.progressTable { min-width: 820px; }
+.progressCell { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.progressCell strong { width: 100%; font-size: 13px; font-weight: 600; }
+.progressCell span { color: rgba(255,255,255,.58); font-size: 11px; }
+.progressState { display: inline-flex; padding: 6px 9px; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; color: rgba(255,255,255,.78); font-size: 12px; white-space: nowrap; }
+.progressState[data-state="complete"] { border-color: var(--main-color); color: white; }
+.progressState[data-state="missing"], .progressState[data-state="unassigned"] { border-color: rgba(255,255,255,.65); color: white; font-weight: 600; }
+.progressState[data-state="revision"] { border-style: dashed; color: white; }
 .filters { display: grid; grid-template-columns: 170px minmax(220px,1fr); gap: 12px; align-items: end; }
 .filters label { color: rgba(255,255,255,.6); font-size: 12px; }
 .filters input, .filters select { margin-top: 7px; }
@@ -143,15 +161,13 @@
 .sheetToolbar { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
 .sheetToolbar .actions { margin-top: 0; }
 .sheetTableWrap { width: 100%; overflow-x: auto; padding-bottom: 8px; }
-.sheetTable { min-width: 1040px; table-layout: fixed; }
+.sheetTable { min-width: 760px; table-layout: fixed; }
 .sheetTable th:first-child, .sheetTable td:first-child { width: 44px; padding-left: 8px; }
-.sheetTable th:nth-child(2) { width: 155px; }
-.sheetTable th:nth-child(3) { width: 145px; }
+.sheetTable th:nth-child(2) { width: 170px; }
+.sheetTable th:nth-child(3) { width: 160px; }
 .sheetTable th:nth-child(4) { width: 120px; }
-.sheetTable th:nth-child(5) { width: 120px; }
-.sheetTable th:nth-child(6) { width: 170px; }
-.sheetTable th:nth-child(7) { width: 100px; }
-.sheetTable th:nth-child(8) { width: 190px; }
+.sheetTable th:nth-child(5) { width: 190px; }
+.sheetTable th:nth-child(6) { width: 120px; }
 .sheetTable td { padding: 8px 6px; vertical-align: middle; }
 .sheetTable tr[data-dirty="true"] { background: rgba(75,119,216,.06); }
 .sheetTable tr[data-error="true"] { background: rgba(255,255,255,.08); }
@@ -193,8 +209,9 @@
   .formHeader { flex-direction: column; }
   .memberPicker { grid-template-columns: 1fr; }
   .inlineEditor { min-width: 0; width: 100%; padding: 14px; }
-  .statsGrid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .statsGrid, .progressStats { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .filters { grid-template-columns: 1fr; }
+  .teamMemberRow { align-items: flex-start; }
   .upcomingList article, .scheduleList article { align-items: flex-start; flex-direction: column; }
   .calendarCard { padding-left: 10px; padding-right: 10px; }
   .calendarHeader h2 { font-size: 18px; }

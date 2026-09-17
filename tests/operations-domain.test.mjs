@@ -4,6 +4,7 @@ import {
   calendarDateForScheduleItem,
   mergeScheduleItems,
   computeSubmissionOverview,
+  computeMemberProjectProgress,
   computeProjectRoundOverview,
   buildProjectDbRecord,
   validateEventDraft,
@@ -72,6 +73,40 @@ test("overview distinguishes individual missing, team unassigned, submitted and 
   assert.equal(u2Individual?.state, "not_submitted");
   assert.equal(u1Team?.state, "not_submitted");
   assert.equal(u3Team?.state, "not_assigned");
+});
+
+test("member progress aggregates individual and team work per person with attention first", () => {
+  const teamAssignment = { ...assignmentTeam, opens_at: "2026-12-01T00:00:00.000Z", due_at: "2026-12-07T23:59:00.000Z", round_key: "round-0002" };
+  const memberProfiles = profiles.map((profile) => ({ ...profile, version: 1 }));
+  const progress = computeMemberProjectProgress({
+    semester: "2026-2",
+    profiles: memberProfiles,
+    memberships,
+    assignments: [assignmentIndividual, teamAssignment],
+    teams: [{ id: "t1", semester: "2026-2", name: "Team One", version: 1 }],
+    teamMembers: [
+      { team_id: "t1", profile_id: "u1", semester: "2026-2" },
+      { team_id: "t1", profile_id: "u2", semester: "2026-2" },
+    ],
+    submissions: [{
+      id: "s-team", assignment_id: teamAssignment.id, semester: "2026-2", project_type: "team", owner_id: null, team_id: "t1",
+      title: "팀1", summary: "", code_repository_url: null, report_filename: "report.md", report_markdown: "# report", report_bytes: 8,
+      report_repository_url: null, report_path: null, submitted_ref: null, status: "approved", review_note: null,
+      first_submitted_at: "2026-12-05T00:00:00.000Z", submitted_at: "2026-12-05T00:00:00.000Z",
+      projectdb_sync_status: "synced", projectdb_sync_error: null, projectdb_synced_at: "2026-12-05T01:00:00.000Z", version: 2,
+    }],
+    now: new Date("2026-12-03T00:00:00.000Z"),
+  });
+  assert.equal(progress.length, 3);
+  const u1 = progress.find((row) => row.profile.id === "u1");
+  const u3 = progress.find((row) => row.profile.id === "u3");
+  assert.equal(u1?.team?.name, "Team One");
+  assert.equal(u1?.individual.missing, 1);
+  assert.equal(u1?.team_projects.approved, 1);
+  assert.equal(u1?.overall_state, "missing");
+  assert.equal(u3?.team_projects.unassigned, 1);
+  assert.equal(u3?.overall_state, "unassigned");
+  assert.equal(progress[0].profile.id, "u3", "team-unassigned members should sort to the top");
 });
 
 test("round overview excludes staff and collapses team work to one row per team", () => {

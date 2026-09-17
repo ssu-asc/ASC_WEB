@@ -10,17 +10,17 @@ import {
   parseXlsxWorkbook,
 } from "../src/lib/member-spreadsheet.ts";
 
-test("spreadsheet paste maps positional rows and normalizes role/boolean values", () => {
-  const rows = parseTabularPaste("20260001\t홍길동\t부원\tY\tgildong\t활성\n20260002\t김ASC\t운영진\t예\t\t비활성");
+test("spreadsheet paste maps simplified positional rows and keeps safe defaults", () => {
+  const rows = parseTabularPaste("20260001\t홍길동\t부원\n20260002\t김ASC\t운영진");
   assert.equal(rows.length, 2);
   assert.equal(rows[0].member_id, "20260001");
   assert.equal(rows[0].role, "member");
   assert.equal(rows[0].semester_active, true);
   assert.equal(rows[0].account_active, true);
-  assert.equal(rows[0].github_username, "gildong");
+  assert.equal(rows[0].github_username, null);
   assert.equal(rows[1].role, "staff");
   assert.equal(rows[1].semester_active, true);
-  assert.equal(rows[1].account_active, false);
+  assert.equal(rows[1].account_active, true);
 });
 
 test("spreadsheet paste consumes recognized headers and aliases", () => {
@@ -89,14 +89,14 @@ test("csv serialization round trips spreadsheet rows deterministically", () => {
     temporary_password: "Password!1234",
   }];
   const csv = serializeCsv(rows);
-  assert.match(csv, /^로그인 아이디,이름,권한,이번 학기 활동,GitHub,계정 상태,임시 비밀번호\r?\n/);
+  assert.match(csv, /^로그인 아이디,이름,권한,임시 비밀번호\r?\n/);
   const parsed = parseCsv(csv);
   assert.equal(parsed[1][0], "abc123");
   assert.equal(parsed[1][1], "Hong, Gil");
-  assert.equal(parsed[1][4], 'quote"user');
-  assert.equal(parsed[1][5], "비활성");
+  assert.equal(parsed[1][2], "부원");
+  assert.equal(parsed[1][3], "Password!1234");
   const publicExport = serializeCsv(rows, false);
-  assert.match(publicExport, /^로그인 아이디,이름,권한,이번 학기 활동,GitHub,계정 상태\r?\n/);
+  assert.match(publicExport, /^로그인 아이디,이름,권한\r?\n/);
   assert.doesNotMatch(publicExport, /임시 비밀번호/);
 });
 
@@ -121,10 +121,10 @@ test("xlsx export and import round trip the normalized member sheet", async () =
   const bytes = await createXlsxWorkbook(rows, { includeTemporaryPassword: false });
   assert.equal(bytes[0], 0x50); assert.equal(bytes[1], 0x4b, "xlsx must be a ZIP container");
   const table = await parseXlsxWorkbook(bytes);
-  assert.deepEqual(table[0], ["로그인 아이디", "이름", "권한", "이번 학기 활동", "GitHub", "계정 상태"]);
+  assert.deepEqual(table[0], ["로그인 아이디", "이름", "권한"]);
   const normalized = normalizeImportedRows(table[0], table.slice(1));
   assert.deepEqual(normalized.map((row) => [row.member_id, row.name, row.role, row.semester_active, row.github_username, row.account_active]), [
-    ["abc123", "홍길동", "member", true, "hong", false],
+    ["abc123", "홍길동", "member", true, null, true],
     ["staff01", "운영진", "staff", true, null, true],
   ]);
 });
@@ -132,5 +132,5 @@ test("xlsx export and import round trip the normalized member sheet", async () =
 test("xlsx template contains supported headers only and includes optional password", async () => {
   const bytes = await createXlsxWorkbook([], { includeTemporaryPassword: true });
   const table = await parseXlsxWorkbook(bytes);
-  assert.deepEqual(table, [["로그인 아이디", "이름", "권한", "이번 학기 활동", "GitHub", "계정 상태", "임시 비밀번호"]]);
+  assert.deepEqual(table, [["로그인 아이디", "이름", "권한", "임시 비밀번호"]]);
 });

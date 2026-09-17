@@ -95,7 +95,7 @@ function Dashboard({ profile }: { profile: Profile }) {
 
 function StaffRedirect() {
   const router = useRouter();
-  useEffect(() => { router.replace("/member/operations/submissions"); }, [router]);
+  useEffect(() => { router.replace("/member/operations/progress"); }, [router]);
   return <main className={styles.page}><p className={styles.notice}>프로젝트 현황으로 이동하고 있습니다.</p></main>;
 }
 

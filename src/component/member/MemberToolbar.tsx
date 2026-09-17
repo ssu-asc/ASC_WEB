@@ -16,7 +16,8 @@ export function MemberToolbar({ profile }: { profile: Profile }) {
     <p className={styles.identity}><strong>{profile.name}</strong>{profile.member_id}</p>
     <nav className={styles.nav} aria-label="회원 메뉴">
       {staff ? <>
-        <Link href="/member/operations/submissions" aria-current={current("/member/operations/submissions")}>프로젝트 현황</Link>
+        <Link href="/member/operations/progress" aria-current={current("/member/operations/progress")}>전체 현황</Link>
+        <Link href="/member/operations/submissions" aria-current={current("/member/operations/submissions")}>회차별 현황</Link>
         <Link href="/member/operations/teams" aria-current={current("/member/operations/teams")}>팀 관리</Link>
         <Link href="/member/operations/members" aria-current={current("/member/operations/members")}>회원 관리</Link>
         <Link href="/member/resources" aria-current={current("/member/resources")}>자료실</Link>

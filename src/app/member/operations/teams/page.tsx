@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MemberGate, useMemberSession } from "@/component/member/MemberSession";
 import { MemberToolbar } from "@/component/member/MemberToolbar";
-import { manageTeam, readTeamAdminSnapshot, type TeamAdminSnapshot } from "@/lib/member-api";
+import { manageTeam, readTeamAdminSnapshot, type RosterRecord, type TeamAdminSnapshot } from "@/lib/member-api";
 import { isActiveStaff, type Profile, type Team } from "@/lib/member-domain";
 import styles from "@/styles/member.module.css";
 
@@ -12,7 +12,25 @@ type View =
   | { status: "error"; message: string }
   | { status: "ready"; data: TeamAdminSnapshot };
 
-function TeamCard({ team, memberNames, onReload }: { team: Team; memberNames: string[]; onReload: () => void }) {
+type EditableMember = RosterRecord & { teamId: string | null };
+
+function TeamCard({
+  team,
+  members,
+  allMembers,
+  teams,
+  busyProfileId,
+  onChangeTeam,
+  onReload,
+}: {
+  team: Team;
+  members: EditableMember[];
+  allMembers: EditableMember[];
+  teams: Team[];
+  busyProfileId: string | null;
+  onChangeTeam: (profileId: string, currentTeamId: string | null, targetTeamId: string) => Promise<void>;
+  onReload: () => void;
+}) {
   const { client } = useMemberSession();
   const [name, setName] = useState(team.name);
   const [busy, setBusy] = useState(false);
@@ -30,7 +48,7 @@ function TeamCard({ team, memberNames, onReload }: { team: Team; memberNames: st
   };
 
   const remove = async () => {
-    if (!client || memberNames.length > 0 || !window.confirm(`'${team.name}' 팀을 삭제할까요?`)) return;
+    if (!client || members.length > 0 || !window.confirm(`'${team.name}' 팀을 삭제할까요?`)) return;
     setBusy(true); setMessage(null);
     try {
       await manageTeam(client, { action: "delete_team", team_id: team.id, expected_version: team.version });
@@ -40,19 +58,37 @@ function TeamCard({ team, memberNames, onReload }: { team: Team; memberNames: st
     } finally { setBusy(false); }
   };
 
+  const movableMembers = allMembers.filter((row) => row.teamId !== team.id);
+
   return <article className={styles.card}>
-    <span className={styles.badge}>{memberNames.length}명</span>
+    <span className={styles.badge}>{members.length}명</span>
     <label className={styles.field}>팀 이름
       <input value={name} maxLength={100} onChange={(event) => setName(event.target.value)} />
     </label>
-    <div className={styles.memberChips}>
-      {memberNames.length > 0 ? memberNames.map((member) => <span key={member}>{member}</span>) : <span>배정된 회원 없음</span>}
+    <div className={styles.actions}>
+      <button className={styles.smallButton} disabled={busy || !name.trim() || name.trim() === team.name} onClick={() => void rename()}>이름 저장</button>
+      {members.length === 0 && <button className={styles.dangerButton} disabled={busy} onClick={() => void remove()}>팀 삭제</button>}
+    </div>
+
+    <div className={styles.teamMemberEditor}>
+      <strong>팀원 수정</strong>
+      {members.length === 0 ? <p className={styles.helper}>배정된 회원이 없습니다.</p> : members.map((row) => <div className={styles.teamMemberRow} key={row.profile.id}>
+        <span>{row.profile.name}<small>{row.profile.member_id}</small></span>
+        <button className={styles.smallButton} disabled={busyProfileId === row.profile.id} onClick={() => void onChangeTeam(row.profile.id, team.id, "")}>빼기</button>
+      </div>)}
+      {movableMembers.length > 0 && <label className={styles.field}>회원 추가 / 이동
+        <select value="" disabled={busyProfileId !== null} onChange={(event) => {
+          const profileId = event.target.value;
+          if (!profileId) return;
+          const row = allMembers.find((candidate) => candidate.profile.id === profileId);
+          if (row) void onChangeTeam(row.profile.id, row.teamId, team.id);
+        }}>
+          <option value="">회원 선택</option>
+          {movableMembers.map((row) => <option key={row.profile.id} value={row.profile.id}>{row.profile.name} · {row.profile.member_id}{row.teamId ? ` · ${teams.find((candidate) => candidate.id === row.teamId)?.name ?? "다른 팀"}에서 이동` : " · 미배정"}</option>)}
+        </select>
+      </label>}
     </div>
     {message && <p className={styles.helper} role="status">{message}</p>}
-    <div className={styles.actions}>
-      <button className={styles.smallButton} disabled={busy || name.trim() === team.name} onClick={() => void rename()}>이름 저장</button>
-      {memberNames.length === 0 && <button className={styles.dangerButton} disabled={busy} onClick={() => void remove()}>팀 삭제</button>}
-    </div>
   </article>;
 }
 
@@ -82,15 +118,6 @@ function TeamOperations({ profile }: { profile: Profile }) {
       .filter((row) => row.profile.role === "member" && row.profile.active && row.membership.active)
       .map((row) => ({ ...row, teamId: linkByProfile.get(row.profile.id) ?? null }));
   }, [view]);
-
-  const teamMemberNames = useMemo(() => {
-    const result = new Map<string, string[]>();
-    for (const row of memberRows) {
-      if (!row.teamId) continue;
-      result.set(row.teamId, [...(result.get(row.teamId) ?? []), `${row.profile.name} · ${row.profile.member_id}`]);
-    }
-    return result;
-  }, [memberRows]);
 
   const createTeam = async () => {
     if (!client || !newName.trim()) return;
@@ -122,7 +149,7 @@ function TeamOperations({ profile }: { profile: Profile }) {
     <div className={styles.headingRow}>
       <div>
         <h1 className={styles.title}>{view.status === "ready" && view.data.semester ? `${view.data.semester.id} 팀 관리` : "팀 관리"}</h1>
-        <p className={styles.description}>팀은 학기 동안 고정됩니다. 운영진이 여기서 편성한 팀이 모든 팀 프로젝트에 사용됩니다.</p>
+        <p className={styles.description}>팀 이름과 구성은 여기서 언제든 수정할 수 있습니다. 변경한 팀 구성이 이후 팀 프로젝트에 그대로 사용됩니다.</p>
       </div>
     </div>
 
@@ -141,7 +168,16 @@ function TeamOperations({ profile }: { profile: Profile }) {
       <section className={styles.scheduleSection}>
         <h2>학기 팀</h2>
         {view.data.teams.length === 0 ? <p className={styles.helper}>아직 만들어진 팀이 없습니다.</p> : <div className={styles.cards}>
-          {view.data.teams.map((team) => <TeamCard key={team.id} team={team} memberNames={teamMemberNames.get(team.id) ?? []} onReload={() => reload((value) => value + 1)} />)}
+          {view.data.teams.map((team) => <TeamCard
+            key={team.id}
+            team={team}
+            members={memberRows.filter((row) => row.teamId === team.id)}
+            allMembers={memberRows}
+            teams={view.data.teams}
+            busyProfileId={busyProfileId}
+            onChangeTeam={changeTeam}
+            onReload={() => reload((value) => value + 1)}
+          />)}
         </div>}
       </section>
 

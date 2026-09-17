@@ -28,7 +28,7 @@ type Props = {
   onReload: () => void;
 };
 
-type BulkAction = "" | "role:member" | "role:staff" | "semester:on" | "semester:off" | "account:on" | "account:off";
+type BulkAction = "" | "role:member" | "role:staff";
 type ImportPreview = { label: string; rows: SpreadsheetMemberRow[]; errors: SpreadsheetValidationError[] };
 
 function recordToRow(record: RosterRecord): SpreadsheetMemberRow {
@@ -54,9 +54,6 @@ function rowSignature(row: SpreadsheetMemberRow): string {
     row.member_id,
     row.name,
     row.role,
-    row.semester_active,
-    row.github_username ?? "",
-    row.account_active,
     row.temporary_password ?? "",
   ]);
 }
@@ -98,9 +95,6 @@ function mergeRows(current: SpreadsheetMemberRow[], incoming: SpreadsheetMemberR
         ...existing,
         name: row.name,
         role: row.role,
-        semester_active: row.semester_active,
-        github_username: row.github_username,
-        account_active: row.account_active,
         ...(existing.existing_profile_id ? {} : { temporary_password: row.temporary_password }),
       };
       continue;
@@ -178,17 +172,19 @@ export function MemberSpreadsheet({ records, onReload }: Props) {
     setRows((current) => current.map((row) => {
       if (!selected.has(row.row_id)) return row;
       if (bulkAction === "role:member") return { ...row, role: "member" as SpreadsheetRole };
-      if (bulkAction === "role:staff") return { ...row, role: "staff" as SpreadsheetRole };
-      if (bulkAction === "semester:on") return { ...row, semester_active: true };
-      if (bulkAction === "semester:off") return { ...row, semester_active: false };
-      if (bulkAction === "account:on") return { ...row, account_active: true };
-      return { ...row, account_active: false };
+      return { ...row, role: "staff" as SpreadsheetRole };
     }));
   };
 
   const previewIncoming = (label: string, incoming: SpreadsheetMemberRow[]) => {
-    const errors = validateSpreadsheetRows(incoming);
-    setImportPreview({ label, rows: incoming, errors });
+    const simplified = incoming.map((row) => ({
+      ...row,
+      semester_active: true,
+      github_username: null,
+      account_active: true,
+    }));
+    const errors = validateSpreadsheetRows(simplified);
+    setImportPreview({ label, rows: simplified, errors });
     setMessage(null);
   };
 
@@ -332,10 +328,6 @@ export function MemberSpreadsheet({ records, onReload }: Props) {
           <option value="">선택 행 일괄 변경</option>
           <option value="role:member">부원으로 변경</option>
           <option value="role:staff">운영진으로 변경</option>
-          <option value="semester:on">학기 활동 켜기</option>
-          <option value="semester:off">학기 활동 끄기</option>
-          <option value="account:on">계정 활성화</option>
-          <option value="account:off">계정 비활성화</option>
         </select>
         <button className={styles.smallButton} type="button" disabled={!bulkAction || selected.size === 0} onClick={applyBulkAction}>적용</button>
         <button className={styles.smallButton} type="button" disabled={selected.size === 0} onClick={removeUnsavedSelected}>신규 행 제거</button>
@@ -344,8 +336,8 @@ export function MemberSpreadsheet({ records, onReload }: Props) {
 
     {pasteOpen && <div className={styles.formCard}>
       <h2>Excel / Google Sheets 붙여넣기</h2>
-      <p className={styles.helper}>아이디, 이름, 권한, 학기 활동, GitHub, 계정 상태 순서의 셀 범위를 그대로 붙여넣거나 헤더와 함께 붙여넣으세요.</p>
-      <textarea className={styles.sheetPaste} rows={7} value={pasteText} onChange={(event) => setPasteText(event.target.value)} placeholder={"20260001\t홍길동\t부원\tY\tgildong\t활성"} />
+      <p className={styles.helper}>아이디, 이름, 권한 순서의 셀 범위를 그대로 붙여넣거나 헤더와 함께 붙여넣으세요. 신규 계정은 현재 학기 활동·계정 활성 상태로 생성됩니다.</p>
+      <textarea className={styles.sheetPaste} rows={7} value={pasteText} onChange={(event) => setPasteText(event.target.value)} placeholder={"20260001\t홍길동\t부원"} />
       <div className={styles.actions}><button className={styles.button} type="button" onClick={applyPaste}>미리보기</button><button className={styles.smallButton} type="button" onClick={() => setPasteOpen(false)}>닫기</button></div>
     </div>}
 
@@ -353,7 +345,7 @@ export function MemberSpreadsheet({ records, onReload }: Props) {
       <h2>가져오기 미리보기</h2>
       <p className={styles.helper}>{importPreview.label} · 전체 {importPreview.rows.length}행 · 유효 {importPreview.rows.length - new Set(importPreview.errors.map((error) => error.row_id)).size}행 · 오류 {new Set(importPreview.errors.map((error) => error.row_id)).size}행</p>
       {importPreview.errors.length > 0 && <ul className={styles.importErrorList}>{importPreview.errors.slice(0, 12).map((error, index) => <li key={`${error.row_id}:${error.code}:${index}`}>{error.row_id} · {error.message}</li>)}</ul>}
-      <div className={styles.tableWrap}><table className={styles.roster}><thead><tr><th>아이디</th><th>이름</th><th>권한</th><th>활동</th><th>GitHub</th><th>계정</th></tr></thead><tbody>{importPreview.rows.slice(0, 10).map((row) => <tr key={row.row_id}><td>{row.member_id}</td><td>{row.name}</td><td>{row.role === "staff" ? "운영진" : "부원"}</td><td>{row.semester_active ? "활동" : "비활동"}</td><td>{row.github_username ?? "-"}</td><td>{row.account_active ? "활성" : "비활성"}</td></tr>)}</tbody></table></div>
+      <div className={styles.tableWrap}><table className={styles.roster}><thead><tr><th>아이디</th><th>이름</th><th>권한</th></tr></thead><tbody>{importPreview.rows.slice(0, 10).map((row) => <tr key={row.row_id}><td>{row.member_id}</td><td>{row.name}</td><td>{row.role === "staff" ? "운영진" : "부원"}</td></tr>)}</tbody></table></div>
       <div className={styles.actions}><button className={styles.button} type="button" disabled={importPreview.errors.length > 0} onClick={applyImportPreview}>그리드에 적용</button><button className={styles.smallButton} type="button" onClick={() => setImportPreview(null)}>취소</button></div>
     </section>}
 
@@ -363,7 +355,7 @@ export function MemberSpreadsheet({ records, onReload }: Props) {
         <caption className={styles.srOnly}>ASC 회원 편집 작업표</caption>
         <thead><tr>
           <th><input type="checkbox" aria-label="전체 선택" checked={rows.length > 0 && selected.size === rows.length} onChange={toggleAll} /></th>
-          <th>로그인 아이디</th><th>이름</th><th>권한</th><th>이번 학기 활동</th><th>GitHub</th><th>계정 상태</th><th>관리</th><th>결과</th>
+          <th>로그인 아이디</th><th>이름</th><th>권한</th><th>관리</th><th>결과</th>
         </tr></thead>
         <tbody>{rows.map((row) => {
           const rowResult = results.get(row.row_id);
@@ -374,9 +366,6 @@ export function MemberSpreadsheet({ records, onReload }: Props) {
             <td data-label="로그인 아이디"><input className={styles.sheetInput} value={row.member_id} disabled={Boolean(row.existing_profile_id)} onChange={(event) => updateRow(row.row_id, "member_id", event.target.value.toLocaleLowerCase())} placeholder="학번/아이디" /></td>
             <td data-label="이름"><input className={styles.sheetInput} value={row.name} onChange={(event) => updateRow(row.row_id, "name", event.target.value)} /></td>
             <td data-label="권한"><select value={row.role} onChange={(event) => updateRow(row.row_id, "role", event.target.value as SpreadsheetRole)}><option value="member">부원</option><option value="staff">운영진</option></select></td>
-            <td data-label="이번 학기 활동" className={styles.sheetCheck}><input type="checkbox" checked={row.semester_active} onChange={(event) => updateRow(row.row_id, "semester_active", event.target.checked)} /></td>
-            <td data-label="GitHub"><input className={styles.sheetInput} value={row.github_username ?? ""} onChange={(event) => updateRow(row.row_id, "github_username", event.target.value || null)} placeholder="선택" /></td>
-            <td data-label="계정 상태" className={styles.sheetCheck}><input type="checkbox" checked={row.account_active} onChange={(event) => updateRow(row.row_id, "account_active", event.target.checked)} /></td>
             <td data-label="관리">{row.existing_profile_id ? <button className={styles.smallButton} type="button" disabled={resettingMemberId !== null} onClick={() => void resetPassword(row)}>{resettingMemberId === row.member_id ? "초기화 중…" : "비밀번호 초기화"}</button> : <span className={styles.secondary}>저장 후 가능</span>}</td>
             <td data-label="결과" className={styles.sheetResult}>{rowErrors.length > 0 ? <span>{rowErrors[0].message}</span> : rowResult ? <span>{rowResult.ok ? "저장됨" : rowResult.error}</span> : dirty ? <span>변경됨</span> : <span>-</span>}</td>
           </tr>;

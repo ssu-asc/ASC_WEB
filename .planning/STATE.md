@@ -20,9 +20,12 @@ ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration 
 - database active-staff guard preserves at least one active staff under concurrent changes
 
 ### Spreadsheet Member Management
-- editable roster grid with explicit batch save
-- selection + bulk role/semester/account-state changes
-- Excel/Google Sheets tabular paste
+- simplified editable roster grid with explicit batch save
+- visible fields are login ID, name, role, and password reset management
+- semester activity, GitHub username, and account-active fields remain in the compatibility model but are hidden from routine member management and preserved on existing rows
+- new/imported accounts default to current-semester active + account active with no GitHub username
+- selection + bulk role changes
+- Excel/Google Sheets tabular paste with the simplified `아이디 / 이름 / 권한` shape
 - CSV and XLSX import/export/template
 - import preview before grid mutation
 - `member-bulk` up to 200 rows with independent row results
@@ -30,7 +33,7 @@ ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration 
 - optimistic profile version checks
 
 ### Semester-Fixed Teams / Projects
-- staff-only semester team management
+- staff-only semester team management with inline team rename, member removal, add/move, and safe empty-team deletion
 - one team per member/semester invariant
 - one team-project submission per `(assignment_id, team_id)`; any confirmed teammate may submit/update it
 - individual/team assignments use `opens_at`, `due_at`, round key, active state and optimistic version
@@ -39,7 +42,9 @@ ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration 
 - `first_submitted_at` determines late status independently of review state
 
 ### Staff Project Overview / ProjectDB
-- round-first project overview
+- member-first `전체 현황` summarizes each person's individual + team progress for the whole semester and surfaces team-unassigned/revision/missing attention first
+- future unopened rounds are counted as `예정`, not `미제출`
+- round-first `회차별 현황` remains the detailed review surface
 - individual rows per expected member; team rows per team
 - team-unassigned members surfaced separately
 - member submission is now one required Markdown upload + optional summary/code-repository URL, with no member-managed ProjectDB path/ref
@@ -126,10 +131,10 @@ The new secret function was deployed using the Supabase server-side `--use-api` 
 
 Latest local evidence for Phase 10:
 
-- `npm test` — **80 passing, 0 failures**
+- `npm test` — **83 passing, 0 failures**
 - `npm run typecheck` — PASS
-- `npm run build` — PASS, Next 15.5.25 static export, **20 pages**
-- `npm run test:browser` — **14/14 PASS**
+- `npm run build` — PASS, Next 15.5.25 static export, **21 pages**
+- `npm run test:browser` — **15/15 PASS**
 - `npm run test:integration` — PASS with disposable local Supabase, migrations `001–011`, Auth/PostgREST/RLS/Edge Functions, Markdown individual/team submission and real local Vault operations
 - ProjectDB compatibility branch/main: `python3 -m unittest discover -s tests -v` — **23 passing**
 - `git diff --check` — PASS for ASC_WEB gate

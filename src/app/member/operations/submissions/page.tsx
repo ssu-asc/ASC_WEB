@@ -143,8 +143,8 @@ function SubmissionOperations({ profile }: { profile: Profile }) {
   return <main className={styles.page}>
     <MemberToolbar profile={profile} />
     <p className={styles.eyebrow}>ASC OPERATIONS</p>
-    <h1 className={styles.title}>{view.status === "ready" && view.data.semester ? `${view.data.semester.id} 프로젝트 현황` : "프로젝트 현황"}</h1>
-    <p className={styles.description}>회차를 선택하면 개인 프로젝트는 회원별, 팀 프로젝트는 팀별 제출 상태를 확인할 수 있습니다.</p>
+    <h1 className={styles.title}>{view.status === "ready" && view.data.semester ? `${view.data.semester.id} 회차별 현황` : "회차별 현황"}</h1>
+    <p className={styles.description}>특정 회차를 자세히 보는 화면입니다. 개인 프로젝트는 회원별, 팀 프로젝트는 팀별 제출·지각·검토 상태를 확인할 수 있습니다.</p>
 
     {view.status === "loading" && <p className={styles.notice}>프로젝트 현황을 불러오고 있습니다.</p>}
     {view.status === "error" && <section className={styles.notice} role="alert"><p>{view.message}</p><button className={styles.button} onClick={() => reload((value) => value + 1)}>다시 불러오기</button></section>}
