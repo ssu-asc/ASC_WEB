@@ -2,7 +2,7 @@
 
 ## Current State
 
-**v1.0 shipped on 2026-09-17.** Phases 1–10 are implemented, integrated, deployed, and milestone-audited. Hosted Supabase is current through migration 011, all required Edge Functions are active, GitHub Pages is live under `/ASC_WEB/`, ProjectDB compatibility is merged, and a least-privilege server-side ProjectDB write token is provisioned. The first real staff approval is an operator smoke for the live GitHub write, not a remaining implementation dependency.
+**v1.0 shipped on 2026-09-17.** Phases 1–10 are implemented, integrated, deployed, and milestone-audited. Hosted Supabase is current through migration 011, all required Edge Functions are active, the production frontend is deployed through Cloudflare Pages project `asc-web` at `https://ssu-asc.com`, ProjectDB compatibility is merged, and a least-privilege server-side ProjectDB write token is provisioned. The first real staff approval is an operator smoke for the live GitHub write, not a remaining implementation dependency.
 
 Milestone records:
 - `.planning/v1.0-MILESTONE-AUDIT.md`
@@ -58,7 +58,7 @@ Only publishable Supabase configuration may reach the browser. RLS and server-si
 
 ## Delivery Boundaries
 
-Supabase production migrations/functions for the Member portal are operator-approved for deployment as implementation phases complete. Public GitHub Pages deployment, git commit/push/PR, production ProjectDB write-token success testing, and Google resource ownership/share administration remain separate release/operator actions.
+Supabase production migrations/functions for the Member portal are operator-approved for deployment as implementation phases complete. Production static deployment uses the existing Cloudflare Pages project `asc-web` and custom domain `ssu-asc.com`; GitHub Pages is only a repository-side fallback and does not own the production custom domain. Git integration, production ProjectDB write-token success testing, and Google resource ownership/share administration remain separate release/operator actions.
 
 No Outline/VPS/Docker service is required by the final architecture.
 

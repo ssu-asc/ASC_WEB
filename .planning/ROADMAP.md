@@ -173,7 +173,7 @@ Supabase Auth/Postgres/Edge Functions + existing ProjectDB Markdown reports. Exi
 - `supabase/functions/submission-write/index.ts`
 - `supabase/functions/submission-admin/index.ts`
 
-**Release status:** ProjectDB compatibility is merged, migration 011 and the new submission functions are deployed, ASC_WEB is live on GitHub Pages, and the least-privilege ProjectDB token is provisioned. The first real approval is an operator smoke for GitHub write permission, not an implementation dependency. Notion synchronization is not required for v1.0 completion.
+**Release status:** ProjectDB compatibility is merged, migration 011 and the new submission functions are deployed, ASC_WEB is live on the existing Cloudflare Pages `asc-web` production project at `https://ssu-asc.com`, and the least-privilege ProjectDB token is provisioned. The first real approval is an operator smoke for GitHub write permission, not an implementation dependency. Notion synchronization is not required for v1.0 completion.
 
 ## Progress
 
@@ -205,4 +205,4 @@ Current verified evidence:
 - `git diff --check` — passing
 - final `supabase db push --dry-run` — remote database up to date
 
-ProjectDB compatibility is merged through PR #80. Hosted Supabase is current through migration 011 and all required Edge Functions are ACTIVE. ASC_WEB is merged through PR #1 and GitHub Pages is deployed successfully under `/ASC_WEB/`; production browser smoke confirms base-path assets and Supabase Auth reachability. A least-privilege hosted `PROJECTDB_TOKEN` is provisioned. The first real approval/publish is retained as an operator smoke rather than a release blocker. Entering real shared organization credentials, external resource permission setup, step-up reveal authentication, and periodic production Auth/token inspection remain separate operator actions.
+ProjectDB compatibility is merged through PR #80. Hosted Supabase is current through migration 011 and all required Edge Functions are ACTIVE. ASC_WEB is merged through PR #1 and deployed to Cloudflare Pages project `asc-web`; `https://ssu-asc.com/member/login/` serves the current portal with root-relative assets, and hosted Edge CORS explicitly allows `https://ssu-asc.com`. A least-privilege hosted `PROJECTDB_TOKEN` is provisioned. The first real approval/publish is retained as an operator smoke rather than a release blocker. Entering real shared organization credentials, external resource permission setup, step-up reveal authentication, and periodic production Auth/token inspection remain separate operator actions.

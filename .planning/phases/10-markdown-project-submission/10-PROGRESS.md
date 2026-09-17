@@ -26,7 +26,7 @@
 - hosted Supabase migration 011 deployed; post-deploy `db push --dry-run` reports up to date
 - hosted `submission-write` / `submission-admin` ACTIVE
 - ASC_WEB PR #1 merged to `main`
-- GitHub Pages run `35118540739`: build/deploy PASS with `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`
+- Cloudflare Pages production deployment `dccffbce-59c4-4fd1-af61-833c0672545f`: project `asc-web`, branch `main`, source `5307453`, deployed to `https://ssu-asc.com`
 - production browser smoke: Member login assets 200; Supabase Auth OPTIONS 200; intentional invalid-login POST 400 handled normally
 
 ## Release ordering
@@ -36,6 +36,6 @@
 3. [x] Apply ASC_WEB migration 011.
 4. [x] Deploy updated `submission-write` and `submission-admin`.
 5. [x] Run hosted Edge reachability smoke.
-6. [x] Merge ASC_WEB and deploy the static frontend through GitHub Pages.
+6. [x] Merge ASC_WEB and deploy the static frontend through the existing Cloudflare Pages `asc-web` production project.
 7. [x] Provision a least-privilege `PROJECTDB_TOKEN`.
 8. [ ] Observe the first real Markdown approval and confirm ProjectDB `report-01.md` plus immutable commit SHA as an operator smoke. Notion synchronization is outside the v1.0 completion gate.

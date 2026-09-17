@@ -14,7 +14,7 @@ Delivered:
 - round-first staff overview, late semantics, and member dashboard/schedule;
 - external resource hub and non-secret staff handover memo;
 - Supabase Vault-backed shared credentials with audited reveal/copy;
-- production Supabase migrations/functions and GitHub Pages deployment.
+- production Supabase migrations/functions and Cloudflare Pages deployment at `ssu-asc.com`.
 
 Archives:
 - [Roadmap](./milestones/v1.0-ROADMAP.md)
