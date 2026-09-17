@@ -3,6 +3,7 @@ import type { SpreadsheetMemberRow } from "./member-spreadsheet";
 import type { SubmissionDraft } from "./submission-upload";
 import {
   buildDashboardItems,
+  computeMemberProjectProgress,
   computeProjectRoundOverview,
   hasActiveMembership,
   isActiveStaff,
@@ -11,6 +12,7 @@ import {
   type Assignment,
   type DashboardItem,
   type EventDraft,
+  type MemberProjectProgressRow,
   type Profile,
   type ProjectRoundOverview,
   type ProjectType,
@@ -392,11 +394,12 @@ export async function reviewSubmission(client: SupabaseClient, body: {
 export interface SubmissionOverview {
   semester: Semester | null;
   overview: ProjectRoundOverview;
+  memberProgress: MemberProjectProgressRow[];
 }
 export async function readSubmissionOverview(client: SupabaseClient, profile: Profile): Promise<SubmissionOverview> {
   if (!isActiveStaff(profile)) throw new Error("운영진만 프로젝트 현황을 볼 수 있습니다.");
   const semester = await readCurrentSemester(client);
-  if (!semester) return { semester: null, overview: { summaries: [], detailsByAssignment: {}, unassignedByAssignment: {} } };
+  if (!semester) return { semester: null, overview: { summaries: [], detailsByAssignment: {}, unassignedByAssignment: {} }, memberProgress: [] };
   const rosterRows = await readRosterSnapshot(client, semester.id);
   const profiles = rosterRows.map((row) => row.profile);
   const memberships = rosterRows.map((row) => row.membership);
@@ -406,17 +409,15 @@ export async function readSubmissionOverview(client: SupabaseClient, profile: Pr
     client.from("team_members").select("team_id,profile_id,semester").eq("semester", semester.id).returns<TeamMember[]>(),
     client.from("submissions").select(SUBMISSION_FIELDS).eq("semester", semester.id).returns<Submission[]>(),
   ]);
+  const assignments = requireQueryData(assignmentsResult, "프로젝트 회차");
+  const teams = requireQueryData(teamsResult, "팀 정보");
+  const teamMembers = requireQueryData(teamMembersResult, "팀원 정보");
+  const submissions = requireQueryData(submissionsResult, "제출 현황");
+  const shared = { semester: semester.id, profiles, memberships, assignments, teams, teamMembers, submissions };
   return {
     semester,
-    overview: computeProjectRoundOverview({
-      semester: semester.id,
-      profiles,
-      memberships,
-      assignments: requireQueryData(assignmentsResult, "프로젝트 회차"),
-      teams: requireQueryData(teamsResult, "팀 정보"),
-      teamMembers: requireQueryData(teamMembersResult, "팀원 정보"),
-      submissions: requireQueryData(submissionsResult, "제출 현황"),
-    }),
+    overview: computeProjectRoundOverview(shared),
+    memberProgress: computeMemberProjectProgress(shared),
   };
 }
 

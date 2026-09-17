@@ -34,7 +34,7 @@ function RosterPage({ profile }: { profile: Profile }) {
     <MemberToolbar profile={profile} />
     <p className={styles.eyebrow}>ASC OPERATIONS</p>
     <h1 className={styles.title}>{view.status === "ready" && view.data.semester ? `${view.data.semester.id} 회원 관리` : "회원 관리"}</h1>
-    <p className={styles.description}>Excel이나 Google Sheets처럼 여러 회원을 한 화면에서 수정하고, 마지막에 한 번에 저장합니다.</p>
+    <p className={styles.description}>로그인 아이디, 이름, 권한만 간단하게 관리합니다. 신규 회원은 현재 학기 활동·계정 활성 상태로 자동 생성됩니다.</p>
 
     {view.status === "loading" && <p role="status" className={styles.notice}>회원 명단을 불러오고 있습니다.</p>}
     {view.status === "error" && <section role="alert" className={styles.notice}><p>{view.message}</p><div className={styles.actions}><button className={styles.button} onClick={() => reload((value) => value + 1)}>다시 불러오기</button></div></section>}

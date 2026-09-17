@@ -31,9 +31,6 @@ const MAIN_HEADERS = [
   "member_id",
   "name",
   "role",
-  "semester_active",
-  "github_username",
-  "account_active",
 ] as const;
 
 const HEADER_ALIASES = new Map<string, keyof SpreadsheetMemberRow>([
@@ -188,7 +185,7 @@ function quoteCsv(value: unknown): string {
 }
 
 export function spreadsheetMatrix(rows: SpreadsheetMemberRow[], includeTemporaryPassword = true): string[][] {
-  const header = ["로그인 아이디", "이름", "권한", "이번 학기 활동", "GitHub", "계정 상태"];
+  const header = ["로그인 아이디", "이름", "권한"];
   if (includeTemporaryPassword) header.push("임시 비밀번호");
   return [
     header,
@@ -197,9 +194,6 @@ export function spreadsheetMatrix(rows: SpreadsheetMemberRow[], includeTemporary
         row.member_id,
         row.name,
         row.role === "staff" ? "운영진" : "부원",
-        row.semester_active ? "활성" : "비활성",
-        row.github_username ?? "",
-        row.account_active ? "활성" : "비활성",
       ];
       if (includeTemporaryPassword) values.push(row.temporary_password ?? "");
       return values;

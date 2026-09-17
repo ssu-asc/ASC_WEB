@@ -158,7 +158,7 @@ try {
     checks += 1;
     console.log(`PASS login state and layout: ${width}px (${ui.setupMode ? 'setup' : 'configured'})`);
   }
-  for (const route of ['/member/', '/member/password/', '/member/submission/', '/member/schedule/', '/member/resources/', '/member/operations/members/', '/member/operations/submissions/', '/member/operations/teams/', '/member/operations/settings/']) {
+  for (const route of ['/member/', '/member/password/', '/member/submission/', '/member/schedule/', '/member/resources/', '/member/operations/members/', '/member/operations/progress/', '/member/operations/submissions/', '/member/operations/teams/', '/member/operations/settings/']) {
     await navigate(base + route);
     let ready = false;
     for (let attempt = 0; attempt < 80; attempt++) {
