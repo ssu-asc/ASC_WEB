@@ -323,17 +323,25 @@ npx supabase secrets set PROJECTDB_TOKEN="<최소 권한 GitHub token/App token>
 
 ProjectDB가 public이고 제출 검증만 할 때는 unauthenticated GitHub API도 가능하지만, rate limit 안정성을 위해 `PROJECTDB_READ_TOKEN`을 별도로 둘 수도 있다. 승인 sidecar 쓰기는 `PROJECTDB_TOKEN`이 필요하다.
 
-### 5. GitHub Pages build 변수
+### 5. 정적 프론트 배포
 
-`.github/workflows/deploy-pages.yml`은 GitHub repository **Variables**에서 아래 값을 build env로 전달한다.
+운영 프론트는 기존 **Cloudflare Pages `asc-web`** 프로젝트와 custom domain `https://ssu-asc.com`을 사용한다. custom domain은 루트 배포이므로 production build에 `NEXT_PUBLIC_BASE_PATH`를 설정하지 않는다.
+
+브라우저에 들어가는 값은 다음 두 개뿐이다.
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-NEXT_PUBLIC_BASE_PATH          # repository subpath가 필요할 때만
 ```
 
-Supabase publishable key는 브라우저 공개용 키다. service-role/secret key나 ProjectDB token은 repository variable로 넣지 않는다.
+로컬/운영 빌드 후 기존 Pages 프로젝트에 배포한다.
+
+```bash
+npm run build
+npx wrangler pages deploy out --project-name asc-web --branch main
+```
+
+GitHub Pages workflow는 repository fallback 용도로 남아 있으며 production custom domain을 소유하지 않는다. fallback 빌드에서만 repository Variable `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`을 사용한다. Supabase publishable key는 브라우저 공개용 키다. service-role/secret key나 ProjectDB token은 정적 빌드 설정에 넣지 않는다.
 
 ### 6. 최초 운영진
 
@@ -419,7 +427,7 @@ npm run test:edge
 git diff --check
 ```
 
-`test:integration`은 localhost/127.0.0.1이 아닌 Supabase URL에서는 실행을 거부하고, disposable local DB를 reset해 실제 Auth/PostgREST/RLS/Edge Functions를 검증한다. `test:edge`는 실제 hosted Supabase의 `team-admin` preflight를 `localhost`, `127.0.0.1`, `0.0.0.0`, ASC_WEB 전용 3010 개발 포트, GitHub Pages origin에서 검사하고 POST 경로가 브라우저 fetch/CORS 실패가 아니라 HTTP 응답까지 도달하는지 확인한다.
+`test:integration`은 localhost/127.0.0.1이 아닌 Supabase URL에서는 실행을 거부하고, disposable local DB를 reset해 실제 Auth/PostgREST/RLS/Edge Functions를 검증한다. `test:edge`는 실제 hosted Supabase의 Edge preflight를 localhost/127.0.0.1/0.0.0 개발 origin, ASC_WEB 전용 3010 개발 포트, production `https://ssu-asc.com`, GitHub Pages fallback origin에서 검사하고 POST 경로가 브라우저 fetch/CORS 실패가 아니라 HTTP 응답까지 도달하는지 확인한다.
 
 현재 주요 검증 범위:
 
@@ -447,7 +455,7 @@ git diff --check
 
 ## 운영 배포 체크
 
-2026-09-17 기준 ProjectDB 호환 변경(PR #80), migration 011, `submission-write`/`submission-admin`, ASC_WEB PR #1, GitHub Pages `/ASC_WEB/` 배포까지 완료했다. `PROJECTDB_REPOSITORY=ssu-asc/ProjectDB`, `PROJECTDB_BRANCH=main`, least-privilege `PROJECTDB_TOKEN`도 hosted Supabase에 설정되어 있다. 첫 실제 승인 1건은 ProjectDB `report-01.md`와 immutable commit SHA를 확인하는 운영 smoke로 사용한다. Notion 동기화는 v1.0 완료 조건이 아니다.
+2026-09-17 기준 ProjectDB 호환 변경(PR #80), migration 011, `submission-write`/`submission-admin`, ASC_WEB PR #1, Cloudflare Pages `asc-web`의 `https://ssu-asc.com` production 배포까지 완료했다. `PROJECTDB_REPOSITORY=ssu-asc/ProjectDB`, `PROJECTDB_BRANCH=main`, least-privilege `PROJECTDB_TOKEN`도 hosted Supabase에 설정되어 있다. 첫 실제 승인 1건은 ProjectDB `report-01.md`와 immutable commit SHA를 확인하는 운영 smoke로 사용한다. Notion 동기화는 v1.0 완료 조건이 아니다.
 
 1. Auth public sign-up이 꺼져 있는가.
 2. Phase 10 release 전 ProjectDB `source: asc_web` validator/Notion 호환 변경이 먼저 통합됐는가.
@@ -458,7 +466,7 @@ git diff --check
 7. 학기 팀 편성을 완료했는가.
 8. 월간 달력은 프로젝트를 마감일에만 표시하고 목록/상세는 전체 제출기간을 표시하는가.
 9. `ASC_WEB_ORIGINS`가 실제 사이트 origin과 일치하고 `npm run test:edge`가 통과하는가.
-10. GitHub Pages repository variables에 browser-safe Supabase 값이 설정되어 있는가.
+10. Cloudflare Pages production build가 browser-safe Supabase URL/publishable key를 사용하고 `ssu-asc.com` 루트 경로로 배포됐는가.
 11. 운영진 메모와 현재 학기 링크 모음이 최신이며 메모에 비밀번호/토큰이 들어가 있지 않은가.
 12. 기존 Notion/Drive/GitHub/Discord 자료의 실제 외부 공유 권한이 의도와 일치하는가.
 13. `회원 공개` 링크만 회원 자료실에서 보이고 `운영진 전용` 링크는 숨겨지는가.

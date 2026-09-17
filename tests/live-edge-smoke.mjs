@@ -34,6 +34,7 @@ const origins = [
   'http://0.0.0.0:3000',
   'http://127.0.0.1:3010',
   'http://0.0.0.0:3010',
+  'https://ssu-asc.com',
   'https://ssu-asc.github.io',
 ];
 

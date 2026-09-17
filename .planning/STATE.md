@@ -6,7 +6,7 @@
 
 The deployed Member operations portal includes Markdown upload submission: members select one `.md` report, staff inspect the exact stored source, and approval generates trusted individual/team ProjectDB reports. Resource hub, global staff memo, and Vault-backed shared staff credentials remain intact.
 
-ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration `202609160011` plus updated `submission-write` and `submission-admin` are deployed. ASC_WEB itself landed through PR #1 and GitHub Pages is live under `/ASC_WEB/` with browser-safe Supabase repository Variables and `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`. A least-privilege `PROJECTDB_TOKEN` is provisioned in hosted Supabase. The first real staff approval remains an operational production smoke for GitHub write permission; it is not a remaining implementation dependency. Notion synchronization is not part of the v1.0 release-completion gate.
+ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration `202609160011` plus updated `submission-write` and `submission-admin` are deployed. ASC_WEB itself landed through PR #1 and production is served from the existing Cloudflare Pages project `asc-web` at `https://ssu-asc.com`; the GitHub Pages custom-domain association is intentionally unset. A least-privilege `PROJECTDB_TOKEN` is provisioned in hosted Supabase. The first real staff approval remains an operational production smoke for GitHub write permission; it is not a remaining implementation dependency. Notion synchronization is not part of the v1.0 release-completion gate.
 
 ## Delivered
 
@@ -136,8 +136,8 @@ Latest local evidence for Phase 10:
 - hosted Supabase migration 011 — DEPLOYED; post-deploy dry-run reports up to date
 - hosted `submission-write` v5 / `submission-admin` v4 — ACTIVE
 - hosted Edge smoke — PASS for `team-admin`, `operations-settings`, and `staff-secrets`
-- GitHub Pages run `35118540739` — build/deploy PASS after enabling Pages and setting `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`
-- production browser smoke — `/ASC_WEB/member/login/` assets load with 200 responses; Supabase Auth preflight reaches 200 and an intentional invalid-login POST reaches 400 with normal UI error handling
+- Cloudflare Pages production deployment `dccffbce-59c4-4fd1-af61-833c0672545f` — project `asc-web`, branch `main`, source `5307453`, deployment PASS
+- production domain smoke — `https://ssu-asc.com/member/login/` returns 200 with current Member Portal assets; hosted Edge preflight with `Origin: https://ssu-asc.com` returns 204 and `Access-Control-Allow-Origin: https://ssu-asc.com`
 
 Integration coverage includes:
 - issued Auth accounts and RLS

@@ -50,9 +50,9 @@ Completed on 2026-09-17 KST:
 - hosted `submission-write` and `submission-admin` are ACTIVE.
 - hosted Edge smoke passes for `team-admin`, `operations-settings`, and `staff-secrets` CORS/reachability.
 - ASC_WEB portal integration merged through PR #1 and release-state documentation through PR #2; `main` is at `f9b994c` for the current production source state.
-- GitHub Pages was enabled for workflow deployment and repository Variables were configured for the browser-safe Supabase URL/key plus `NEXT_PUBLIC_BASE_PATH=/ASC_WEB`.
+- Production frontend is deployed through the pre-existing Cloudflare Pages project `asc-web`, whose custom domain is `ssu-asc.com`. GitHub Pages does not own the production custom domain.
 - Pages run `35118540739` passed both build and deploy.
-- production browser smoke at `/ASC_WEB/member/login/` confirms JS/CSS/fonts/images load from the base path, the form activates, Supabase Auth OPTIONS reaches 200, and an intentional invalid-login POST reaches 400 and is rendered as a normal login failure.
+- production custom-domain smoke confirms `https://ssu-asc.com/member/login/` returns 200 and serves the current Member Portal root-relative assets. Hosted Edge preflight with `Origin: https://ssu-asc.com` returns 204 and the matching `Access-Control-Allow-Origin` header.
 
 Release conclusion:
 
