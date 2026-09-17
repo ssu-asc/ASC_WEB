@@ -141,8 +141,8 @@ Latest local evidence for Phase 10:
 - hosted Supabase migration 011 — DEPLOYED; post-deploy dry-run reports up to date
 - hosted `submission-write` v5 / `submission-admin` v4 — ACTIVE
 - hosted Edge smoke — PASS for `team-admin`, `operations-settings`, and `staff-secrets`
-- Cloudflare Pages production deployment `dccffbce-59c4-4fd1-af61-833c0672545f` — project `asc-web`, branch `main`, source `5307453`, deployment PASS
-- production domain smoke — `https://ssu-asc.com/member/login/` returns 200 with current Member Portal assets; hosted Edge preflight with `Origin: https://ssu-asc.com` returns 204 and `Access-Control-Allow-Origin: https://ssu-asc.com`
+- Cloudflare Pages production deployment `0b9fd3ee-5e99-46f1-9cbb-f3bbbb3826f6` — project `asc-web`, branch `main`, source `62dda61`, deployment PASS
+- production domain smoke — `https://ssu-asc.com/member/operations/progress/` returns 200 and loads the current progress page chunk; `https://ssu-asc.com/member/login/` remains live; hosted Edge preflight with `Origin: https://ssu-asc.com` returns 204 and `Access-Control-Allow-Origin: https://ssu-asc.com`
 
 Integration coverage includes:
 - issued Auth accounts and RLS
