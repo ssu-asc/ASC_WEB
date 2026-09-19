@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SpreadsheetMemberRow } from "./member-spreadsheet";
 import type { SubmissionDraft } from "./submission-upload";
+import type { PublicRecruitmentSettings, PublicRecruitmentSettingsDraft } from "./public-recruitment";
+export type { PublicRecruitmentSettings, PublicRecruitmentSettingsDraft } from "./public-recruitment";
 import {
   buildDashboardItems,
   computeMemberProjectProgress,
@@ -45,23 +47,6 @@ export async function readCurrentSemester(client: SupabaseClient): Promise<Semes
   if (result.error) throw new Error("현재 학기를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
   return result.data;
 }
-
-export interface PublicRecruitmentSettings {
-  id: boolean;
-  enabled: boolean;
-  title: string;
-  description: string;
-  button_label: string;
-  button_href: string;
-  starts_at: string | null;
-  ends_at: string | null;
-  version: number;
-  updated_at: string;
-}
-
-export type PublicRecruitmentSettingsDraft = Pick<PublicRecruitmentSettings,
-  "enabled" | "title" | "description" | "button_label" | "button_href" | "starts_at" | "ends_at"
->;
 
 export async function readPublicRecruitmentSettings(client: SupabaseClient): Promise<PublicRecruitmentSettings | null> {
   const result = await client.from("public_recruitment_settings")
