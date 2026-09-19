@@ -134,7 +134,7 @@ The new secret function was deployed using the Supabase server-side `--use-api` 
 
 Latest local evidence for Phase 10:
 
-- `npm test` — **83 passing, 0 failures**
+- `npm test` — **87 passing, 0 failures**, including ProjectDB template generation/import coverage
 - `npm run typecheck` — PASS
 - `npm run build` — PASS, Next 15.5.25 static export, **21 pages**
 - `npm run test:browser` — **15/15 PASS**
@@ -144,7 +144,7 @@ Latest local evidence for Phase 10:
 - hosted Supabase migration 011 — DEPLOYED; post-deploy dry-run reports up to date
 - hosted `submission-write` v5 / `submission-admin` v4 — ACTIVE
 - hosted Edge smoke — PASS for `team-admin`, `operations-settings`, and `staff-secrets`
-- Cloudflare Pages production deployment `0b9fd3ee-5e99-46f1-9cbb-f3bbbb3826f6` — project `asc-web`, branch `main`, source `62dda61`, deployment PASS
+- Cloudflare Pages production deployment `02084741-28f9-4008-8103-a2977bb6c532` — project `asc-web`, branch `main`, source `600d70e`, integrated report editor deployment PASS
 - production domain smoke — `https://ssu-asc.com/member/operations/progress/` returns 200 and loads the current progress page chunk; `https://ssu-asc.com/member/login/` remains live; hosted Edge preflight with `Origin: https://ssu-asc.com` returns 204 and `Access-Control-Allow-Origin: https://ssu-asc.com`
 
 Integration coverage includes:
