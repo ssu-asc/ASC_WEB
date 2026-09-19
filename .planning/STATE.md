@@ -118,6 +118,7 @@ Remote migration history is current through:
 202609160009
 202609160010
 202609160011
+202609190012
 ```
 
 A post-deploy `supabase db push --dry-run` reports the remote database is up to date.
@@ -132,8 +133,9 @@ Active hosted Edge Functions:
 - `submission-admin` — ACTIVE
 - `operations-settings` — ACTIVE
 - `staff-secrets` — ACTIVE
+- `schedule-series` — ACTIVE
 
-The new secret function was deployed using the Supabase server-side `--use-api` bundle path. Hosted smoke verifies CORS and invalid-JWT HTTP reachability without sending any real secret.
+`operations-settings` and the new `schedule-series` function are deployed with the server-side `--use-api` bundle path. Hosted smoke verifies CORS and invalid-JWT HTTP reachability without sending any real secret.
 
 ## Verification Evidence
 
@@ -146,11 +148,14 @@ Latest local evidence for Phase 10:
 - `npm run test:integration` — PASS with disposable local Supabase, migrations `001–012`, Auth/PostgREST/RLS/Edge Functions, public recruitment settings, recurring schedule materialization, Markdown individual/team submission and real local Vault operations
 - ProjectDB compatibility branch/main: `python3 -m unittest discover -s tests -v` — **23 passing**
 - `git diff --check` — PASS for ASC_WEB gate
-- hosted Supabase migration 011 — DEPLOYED; post-deploy dry-run reports up to date
-- hosted `submission-write` v5 / `submission-admin` v4 — ACTIVE
-- hosted Edge smoke — PASS for `team-admin`, `operations-settings`, and `staff-secrets`
-- Cloudflare Pages production deployment `02084741-28f9-4008-8103-a2977bb6c532` — project `asc-web`, branch `main`, source `600d70e`, integrated report editor deployment PASS
-- production domain smoke — `https://ssu-asc.com/member/operations/progress/` returns 200 and loads the current progress page chunk; `https://ssu-asc.com/member/login/` remains live; hosted Edge preflight with `Origin: https://ssu-asc.com` returns 204 and `Access-Control-Allow-Origin: https://ssu-asc.com`
+- hosted Supabase migration 012 — DEPLOYED; post-deploy dry-run reports up to date
+- hosted `submission-write` v8 / `submission-admin` v7 — ACTIVE
+- hosted `operations-settings` v8 / `schedule-series` v1 — ACTIVE
+- hosted Edge smoke — PASS for `team-admin`, `operations-settings`, `staff-secrets`, and `schedule-series`
+- hosted public recruitment singleton — verified `enabled=false` after migration 012; the homepage popup is off until staff explicitly enables it
+- Cloudflare Pages production deployment `15ea21de-2271-4785-8188-329c06a2f88b` — project `asc-web`, branch `main`, source `7e209c1`, configurable recruitment + recurring calendar deployment PASS
+- production domain smoke — `https://ssu-asc.com/`, `/member/schedule/`, and `/member/operations/settings/` return 200; production bundles contain the recruitment settings UI and daily/weekly/monthly/count/until/never recurring-schedule controls
+- public homepage performance — First Load JS remains **163 kB** by reading the public recruitment singleton through a lightweight REST request rather than loading the full Supabase client
 
 Integration coverage includes:
 - issued Auth accounts and RLS
@@ -159,6 +164,9 @@ Integration coverage includes:
 - generated reset credential login
 - fixed-team management and shared team submission behavior
 - project-round scheduling/concurrency and late semantics
+- public recruitment default-off RLS/read boundary plus staff-only optimistic configuration updates
+- recurring calendar rules for ordinary events and project submissions, including multi-weekday weekly recurrence, finite/until/never endings, and rolling materialization
+- recurring project patterns materialize normal individual/team/alternating assignments while preserving the existing submission/review model
 - Markdown upload validation, draft persistence, individual/team shared submission behavior, stale resubmission conflicts, and durable review/sync states
 - deterministic individual/team ProjectDB report frontmatter/path generation
 - ProjectDB legacy validator compatibility plus `source: asc_web` individual/team fixtures and individual tracking skip
