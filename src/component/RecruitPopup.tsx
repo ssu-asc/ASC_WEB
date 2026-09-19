@@ -6,20 +6,25 @@ import DefaultBtn from "./DefaultBtn";
 import { useRouter } from "next/navigation";
 import { IoClose } from "react-icons/io5";
 import { TbInfoHexagonFilled } from "react-icons/tb";
+import type { PublicRecruitmentSettings } from "@/lib/member-api";
 
 interface RecruitPopupProps {
   visible: boolean;
   onClose: () => void;
-  applyData: any;
+  settings: PublicRecruitmentSettings | null;
 }
 
-export default function RecruitPopup({ visible, onClose, applyData }: RecruitPopupProps) {
+export default function RecruitPopup({ visible, onClose, settings }: RecruitPopupProps) {
   const router = useRouter();
-  const currentYear = new Date().getFullYear();
 
-  if (!visible) {
+  if (!visible || !settings) {
     return null;
   }
+
+  const go = () => {
+    if (settings.button_href.startsWith("/")) router.push(settings.button_href);
+    else window.location.href = settings.button_href;
+  };
 
   return (
     <div className={styles.popup_backdrop} onClick={onClose}>
@@ -29,14 +34,14 @@ export default function RecruitPopup({ visible, onClose, applyData }: RecruitPop
         </button>
         <div className={styles.popup_content}>
           <p className={styles.popup_title}>
-            <TbInfoHexagonFilled /> ASC 리크루팅 안내
+            <TbInfoHexagonFilled /> {settings.title}
           </p>
           <p className={styles.popup_description}>
-            {currentYear}년도 숭실대학교 ASC 소모임에서 새로운 지원자를 모집하고 있습니다.
+            {settings.description}
           </p>
 
-          <DefaultBtn onClick={() => { router.push("/apply"); }} style={{ marginTop: "30px", width: "100%" }}>
-            지원 페이지로 이동 <FaArrowRight />
+          <DefaultBtn onClick={go} style={{ marginTop: "30px", width: "100%" }}>
+            {settings.button_label} <FaArrowRight />
           </DefaultBtn>
         </div>
       </div>

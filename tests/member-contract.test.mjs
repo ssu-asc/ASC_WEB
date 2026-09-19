@@ -324,19 +324,35 @@ test('project month calendar is deadline-first while list views keep submission 
 });
 
 test('project rounds are administered through a staff edge function and recurring schedule UI', () => {
-  const migration = read('supabase/migrations/202609150007_operations_redesign.sql');
-  assert.match(migration, /create or replace function public\.create_assignment_atomic/i);
-  assert.match(migration, /create or replace function public\.create_assignment_series_atomic/i);
-  const source = read('supabase/functions/assignment-admin/index.ts');
+  const migration = read('supabase/migrations/202609190012_public_recruitment_recurring_schedule.sql');
+  assert.match(migration, /create table if not exists public\.schedule_series/i);
+  assert.match(migration, /materialize_schedule_assignment/i);
+  const source = read('supabase/functions/schedule-series/index.ts');
   assert.match(source, /requireStaff\(req\)/);
-  assert.match(source, /create_assignment_atomic/);
-  assert.match(source, /create_assignment_series_atomic/);
-  assert.match(source, /expected_version/);
-  assert.match(read('supabase/config.toml'), /\[functions\.assignment-admin\]/);
+  assert.match(source, /requireUser\(req\)/);
+  assert.match(source, /generateScheduleOccurrences/);
+  assert.match(source, /materialize_schedule_assignment/);
+  assert.match(read('supabase/config.toml'), /\[functions\.schedule-series\]/);
   const page = read('src/app/member/schedule/page.tsx');
-  assert.match(page, /개인 ↔ 팀 반복/);
-  assert.match(page, /saveAssignmentSeries/);
-  assert.match(page, /generateAlternatingRounds/);
+  for (const label of ['반복 안 함', '매일', '매주', '매월', '횟수 지정', '날짜까지', '계속', '개인 ↔ 팀 교대']) assert.match(page, new RegExp(label));
+  assert.match(page, /createScheduleSeries/);
+  assert.match(page, /updateScheduleSeries/);
+  assert.match(page, /generateScheduleOccurrences/);
+});
+
+test('public recruitment popup is disabled by default and staff-configurable', () => {
+  const migration = read('supabase/migrations/202609190012_public_recruitment_recurring_schedule.sql');
+  assert.match(migration, /public_recruitment_settings/);
+  assert.match(migration, /values \(true, false\)/i);
+  assert.match(migration, /grant select on public\.public_recruitment_settings to anon, authenticated/i);
+  const home = read('src/app/page.tsx');
+  assert.match(home, /readPublicRecruitmentSettings/);
+  assert.doesNotMatch(home, /data\.isOpen/);
+  const settings = read('src/app/member/operations/settings/page.tsx');
+  assert.match(settings, /공개 리크루팅 안내/);
+  assert.match(settings, /리크루팅 설정 저장/);
+  const edge = read('supabase/functions/operations-settings/index.ts');
+  assert.match(edge, /save_recruitment_settings/);
 });
 
 test('partial member updates preserve omitted semester requirement flags', () => {

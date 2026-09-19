@@ -5,6 +5,10 @@ export type ReviewState = "submitted" | "revision_requested" | "approved";
 export type DisplayState = ReviewState | "not_submitted" | "not_assigned" | "not_required";
 export type ProjectDbSyncStatus = "not_requested" | "pending" | "synced" | "failed";
 export type EventCategory = "project" | "seminar" | "ctf" | "meeting" | "presentation" | "other";
+export type ScheduleSeriesKind = "event" | "project";
+export type ScheduleProjectPattern = "individual" | "team" | "alternating";
+export type ScheduleRecurrenceFrequency = "none" | "daily" | "weekly" | "monthly";
+export type ScheduleRecurrenceEndMode = "count" | "until" | "never";
 
 export interface Profile {
   id: string;
@@ -39,6 +43,8 @@ export interface Assignment {
   round_key: string;
   active: boolean;
   version: number;
+  schedule_series_id?: string | null;
+  occurrence_index?: number | null;
 }
 export interface Submission {
   id: string;
@@ -86,6 +92,29 @@ export interface ScheduleEvent {
   end_at: string | null;
   link_url: string | null;
   version: number;
+  schedule_series_id?: string | null;
+  occurrence_index?: number | null;
+}
+
+export interface ScheduleSeries {
+  id: string;
+  semester: string;
+  kind: ScheduleSeriesKind;
+  title: string;
+  description: string;
+  event_category: Exclude<EventCategory, "project"> | null;
+  project_pattern: ScheduleProjectPattern | null;
+  link_url: string | null;
+  first_start_at: string;
+  first_end_at: string;
+  recurrence_frequency: ScheduleRecurrenceFrequency;
+  recurrence_interval: number;
+  weekdays: number[];
+  end_mode: ScheduleRecurrenceEndMode;
+  occurrence_count: number | null;
+  until_at: string | null;
+  active: boolean;
+  version: number;
 }
 export interface ScheduleItem {
   id: string;
@@ -97,6 +126,8 @@ export interface ScheduleItem {
   start_at: string;
   end_at: string | null;
   link_url: string | null;
+  schedule_series_id?: string | null;
+  occurrence_index?: number | null;
 }
 export interface SubmissionOverviewRow {
   profile: Profile;
@@ -573,6 +604,8 @@ export function mergeScheduleItems(input: { assignments: Assignment[]; events: S
       id: `assignment:${assignment.id}`, source: "assignment" as const, title: assignment.title,
       category: "project" as const, project_type: assignment.project_type, description: assignment.description,
       start_at: assignment.opens_at!, end_at: assignment.due_at, link_url: null,
+      schedule_series_id: assignment.schedule_series_id ?? null,
+      occurrence_index: assignment.occurrence_index ?? null,
     }));
   const eventItems: ScheduleItem[] = input.events.map((event) => ({ ...event, source: "event" as const, project_type: null }));
   return [...projectItems, ...eventItems].sort((a, b) => new Date(a.start_at).valueOf() - new Date(b.start_at).valueOf());

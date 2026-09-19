@@ -21,3 +21,6 @@ verify_jwt = true
 
 [functions.staff-secrets]
 verify_jwt = true
+
+[functions.schedule-series]
+verify_jwt = true

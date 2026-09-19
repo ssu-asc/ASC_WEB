@@ -9,10 +9,12 @@ import {
   deactivateResourceLink,
   listStaffSharedSecretAudit,
   listStaffSharedSecrets,
+  readPublicRecruitmentSettings,
   readStaffPrivateSettings,
   readStaffResourceAdmin,
   reorderResourceLinks,
   revealStaffSharedSecret,
+  savePublicRecruitmentSettings,
   saveStaffPrivateSettings,
   setStaffSharedSecretActive,
   updateResourceLink,
@@ -22,6 +24,8 @@ import {
   type ResourceLink,
   type ResourceLinkDraft,
   type ResourceService,
+  type PublicRecruitmentSettings,
+  type PublicRecruitmentSettingsDraft,
   type StaffPrivateSettings,
   type StaffResourceAdminSnapshot,
   type StaffSharedSecret,
@@ -37,6 +41,7 @@ type View =
       status: "ready";
       resources: StaffResourceAdminSnapshot;
       privateSettings: StaffPrivateSettings;
+      recruitment: PublicRecruitmentSettings;
       secrets: StaffSharedSecret[];
       audits: StaffSharedSecretAudit[];
     };
@@ -61,6 +66,25 @@ type SecretEditorState = {
 };
 
 const REVEAL_TTL_MS = 30_000;
+
+function localInput(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (!Number.isFinite(date.valueOf())) return "";
+  const parts = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`;
+}
+
+function inputToIsoOrNull(value: string): string | null {
+  if (!value) return null;
+  const date = new Date(`${value}:00+09:00`);
+  if (!Number.isFinite(date.valueOf())) throw new Error("날짜와 시간을 확인해 주세요.");
+  return date.toISOString();
+}
 
 const SERVICE_LABELS: Record<ResourceService, string> = {
   notion: "Notion",
@@ -147,6 +171,15 @@ function StaffResourceSettingsView({ profile }: { profile: Profile }) {
   const { client } = useMemberSession();
   const [view, setView] = useState<View>({ status: "loading" });
   const [staffMemo, setStaffMemo] = useState("");
+  const [recruitmentDraft, setRecruitmentDraft] = useState<PublicRecruitmentSettingsDraft>({
+    enabled: false,
+    title: "ASC 리크루팅 안내",
+    description: "숭실대학교 ASC 소모임에서 새로운 지원자를 모집하고 있습니다.",
+    button_label: "지원 페이지로 이동",
+    button_href: "/apply",
+    starts_at: null,
+    ends_at: null,
+  });
   const [linkEditor, setLinkEditor] = useState<LinkEditorState>({ open: false, editing: null, draft: emptyLinkDraft });
   const [secretEditor, setSecretEditor] = useState<SecretEditorState>({ open: false, editing: null, draft: emptySecretDraft });
   const [revealed, setRevealed] = useState<Record<string, string>>({});
@@ -183,20 +216,32 @@ function StaffResourceSettingsView({ profile }: { profile: Profile }) {
     if (!client) return;
     setView({ status: "loading" });
     try {
-      const [resources, privateSettings, secretsResponse, auditResponse] = await Promise.all([
+      const [resources, privateSettings, recruitment, secretsResponse, auditResponse] = await Promise.all([
         readStaffResourceAdmin(client, profile),
         readStaffPrivateSettings(client, profile),
+        readPublicRecruitmentSettings(client),
         listStaffSharedSecrets(client),
         listStaffSharedSecretAudit(client),
       ]);
+      if (!recruitment) throw new Error("리크루팅 설정을 찾을 수 없습니다.");
       setView({
         status: "ready",
         resources,
         privateSettings,
+        recruitment,
         secrets: secretsResponse.secrets,
         audits: auditResponse.audits,
       });
       setStaffMemo(privateSettings.staff_memo);
+      setRecruitmentDraft({
+        enabled: recruitment.enabled,
+        title: recruitment.title,
+        description: recruitment.description,
+        button_label: recruitment.button_label,
+        button_href: recruitment.button_href,
+        starts_at: recruitment.starts_at,
+        ends_at: recruitment.ends_at,
+      });
     } catch (error) {
       setView({ status: "error", message: error instanceof Error ? error.message : "운영진 설정을 불러오지 못했습니다." });
     }
@@ -236,6 +281,29 @@ function StaffResourceSettingsView({ profile }: { profile: Profile }) {
       setMessage("운영진 메모를 저장했습니다.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "운영진 메모를 저장하지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveRecruitment = async () => {
+    if (!client || view.status !== "ready" || busy) return;
+    setBusy(true); setMessage(null);
+    try {
+      const response = await savePublicRecruitmentSettings(client, recruitmentDraft, view.recruitment.version);
+      setView({ ...view, recruitment: response.recruitment });
+      setRecruitmentDraft({
+        enabled: response.recruitment.enabled,
+        title: response.recruitment.title,
+        description: response.recruitment.description,
+        button_label: response.recruitment.button_label,
+        button_href: response.recruitment.button_href,
+        starts_at: response.recruitment.starts_at,
+        ends_at: response.recruitment.ends_at,
+      });
+      setMessage(response.recruitment.enabled ? "리크루팅 안내 설정을 저장했습니다." : "리크루팅 안내를 껐습니다.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "리크루팅 설정을 저장하지 못했습니다.");
     } finally {
       setBusy(false);
     }
@@ -422,6 +490,28 @@ function StaffResourceSettingsView({ profile }: { profile: Profile }) {
     {view.status === "error" && <section className={styles.notice} role="alert"><p>{view.message}</p><button className={styles.button} onClick={() => void load()}>다시 불러오기</button></section>}
 
     {view.status === "ready" && <>
+      <section className={styles.formCard}>
+        <div className={styles.headingRow}>
+          <div>
+            <h2>공개 리크루팅 안내</h2>
+            <p className={styles.helper}>메인 화면의 모집 팝업을 여기서 켜고 끕니다. 현재 기본값은 꺼짐입니다. 시작/종료 시간을 비워두면 수동으로 끌 때까지 유지됩니다.</p>
+          </div>
+          <label className={styles.toggleField}>
+            <input type="checkbox" checked={recruitmentDraft.enabled} onChange={(event) => setRecruitmentDraft((current) => ({ ...current, enabled: event.target.checked }))} />
+            <span>{recruitmentDraft.enabled ? "사용 중" : "꺼짐"}</span>
+          </label>
+        </div>
+        <div className={styles.formGrid}>
+          <label className={styles.field}>제목<input maxLength={100} value={recruitmentDraft.title} onChange={(event) => setRecruitmentDraft((current) => ({ ...current, title: event.target.value }))} /></label>
+          <label className={styles.field}>버튼 문구<input maxLength={80} value={recruitmentDraft.button_label} onChange={(event) => setRecruitmentDraft((current) => ({ ...current, button_label: event.target.value }))} /></label>
+          <label className={styles.field}>버튼 이동 주소<input value={recruitmentDraft.button_href} onChange={(event) => setRecruitmentDraft((current) => ({ ...current, button_href: event.target.value }))} placeholder="/apply 또는 https://" /></label>
+          <label className={styles.field}>노출 시작 <span className={styles.secondary}>선택</span><input type="datetime-local" value={localInput(recruitmentDraft.starts_at)} onChange={(event) => setRecruitmentDraft((current) => ({ ...current, starts_at: inputToIsoOrNull(event.target.value) }))} /></label>
+          <label className={styles.field}>노출 종료 <span className={styles.secondary}>선택</span><input type="datetime-local" value={localInput(recruitmentDraft.ends_at)} onChange={(event) => setRecruitmentDraft((current) => ({ ...current, ends_at: inputToIsoOrNull(event.target.value) }))} /></label>
+        </div>
+        <label className={styles.field}>설명<textarea rows={3} maxLength={500} value={recruitmentDraft.description} onChange={(event) => setRecruitmentDraft((current) => ({ ...current, description: event.target.value }))} /></label>
+        <div className={styles.actions}><button className={styles.button} disabled={busy} onClick={() => void saveRecruitment()}>{busy ? "저장 중…" : "리크루팅 설정 저장"}</button></div>
+      </section>
+
       <section className={styles.formCard}>
         <h2>운영진 메모</h2>
         <p className={styles.helper}>Google 계정, Instagram, GitHub 등 비밀이 아닌 인수인계 정보를 적어두세요. <strong>비밀번호/토큰은 메모에 적지 말고 아래 공용 계정 / 비밀정보에 저장하세요.</strong></p>
