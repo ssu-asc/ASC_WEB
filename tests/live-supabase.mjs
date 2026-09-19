@@ -470,6 +470,16 @@ try {
     opens_at: fixtureOpensAt, due_at: fixtureDueAt,
   });
   assert.equal(staleRoundUpdate.response.status, 409, 'stale project-round edit must conflict');
+  const allDayRoundUpdate = await invokeFunction(clients.staff, 'assignment-admin', {
+    action: 'update', assignment_id: individualAssignmentId, expected_version: 2, title: '통합 테스트 개인 회차 수정', description: '',
+    opens_at: fixtureOpensAt, due_at: fixtureDueAt, all_day: true,
+  });
+  assert.equal(allDayRoundUpdate.response.status, 200, JSON.stringify(allDayRoundUpdate.payload));
+  const allDayRound = await admin.from('assignments').select('all_day,opens_at,due_at,version').eq('id', individualAssignmentId).single();
+  assert.equal(allDayRound.error, null, allDayRound.error?.message);
+  assert.equal(allDayRound.data.all_day, true);
+  assert.match(new Date(new Date(allDayRound.data.opens_at).valueOf() + 9 * 60 * 60 * 1000).toISOString(), /T00:00:00\.000Z$/);
+  assert.match(new Date(new Date(allDayRound.data.due_at).valueOf() + 9 * 60 * 60 * 1000).toISOString(), /T23:59:59\.999Z$/);
 
   stage = 'recurring schedule series';
   const seriesDenied = await invokeFunction(clients.a, 'schedule-series', {
@@ -481,13 +491,19 @@ try {
   const recurringProject = await invokeFunction(clients.staff, 'schedule-series', {
     action: 'create', kind: 'project', title: '통합 반복 프로젝트', description: '', event_category: null, project_pattern: 'alternating', link_url: null,
     first_start_at: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(), first_end_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    recurrence_frequency: 'daily', recurrence_interval: 2, weekdays: [], end_mode: 'count', occurrence_count: 3, until_at: null,
+    all_day: true, recurrence_frequency: 'daily', recurrence_interval: 2, weekdays: [], end_mode: 'count', occurrence_count: 3, until_at: null,
   });
   assert.equal(recurringProject.response.status, 200, JSON.stringify(recurringProject.payload));
-  const recurringAssignments = await admin.from('assignments').select('project_type,schedule_series_id,occurrence_index').eq('schedule_series_id', recurringProject.payload.series.id).order('occurrence_index');
+  assert.equal(recurringProject.payload.series.all_day, true);
+  const recurringAssignments = await admin.from('assignments').select('project_type,schedule_series_id,occurrence_index,all_day,opens_at,due_at').eq('schedule_series_id', recurringProject.payload.series.id).order('occurrence_index');
   assert.equal(recurringAssignments.error, null, recurringAssignments.error?.message);
   assert.equal(recurringAssignments.data.length, 3);
   assert.deepEqual(recurringAssignments.data.map((row) => row.project_type), ['individual', 'team', 'individual']);
+  assert.equal(recurringAssignments.data.every((row) => row.all_day === true), true);
+  for (const row of recurringAssignments.data) {
+    assert.match(new Date(new Date(row.opens_at).valueOf() + 9 * 60 * 60 * 1000).toISOString(), /T00:00:00\.000Z$/);
+    assert.match(new Date(new Date(row.due_at).valueOf() + 9 * 60 * 60 * 1000).toISOString(), /T23:59:59\.999Z$/);
+  }
   const materializeByMember = await invokeFunction(clients.a, 'schedule-series', { action: 'materialize' });
   assert.equal(materializeByMember.response.status, 200, JSON.stringify(materializeByMember.payload));
 

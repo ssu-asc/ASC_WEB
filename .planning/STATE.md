@@ -68,6 +68,9 @@ ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration 
 - recurrence rules support none/daily/weekly/monthly, arbitrary interval, multi-weekday weekly selection, and count/until/never endings
 - `never` rules stay durable in `schedule_series` and materialize a rolling ~180-day horizon on authenticated schedule reads
 - recurring project schedules can be individual, team, or alternating; every occurrence becomes a normal independent assignment/submission window
+- ordinary events, project submission windows, and recurring series support a true `all_day` flag; all-day values normalize to Korea-local `00:00 → 23:59:59.999` and render without clock times
+- migration 013 defaults historical rows to `all_day=false`, so existing timed schedules keep their original behavior
+- schedule bulk edit can toggle `하루 종일` per selected row in addition to title/date/time edits
 - staff can bulk-select existing schedule occurrences, edit title/start/end-or-deadline inline, shift selected rows by ±N days, and save them together through the existing optimistic-version APIs
 - schedule bulk mode also supports `선택 삭제` and double-confirmed `전체 삭제`; ordinary events are deleted, project rounds use the existing protected deactivate path, and submissions prevent destructive project-round deletion
 - deleting recurring occurrences also deactivates their schedule series so materialization cannot silently recreate them
@@ -145,11 +148,11 @@ Active hosted Edge Functions:
 
 Latest local evidence for Phase 10:
 
-- `npm test` — **93 passing, 0 failures**, including ProjectDB template generation/import, calendar recurrence, and schedule bulk-edit coverage
+- `npm test` — **94 passing, 0 failures**, including ProjectDB template generation/import, calendar recurrence, schedule bulk-edit/delete, and all-day coverage
 - `npm run typecheck` — PASS
 - `npm run build` — PASS, Next 15.5.25 static export, **21 pages**
 - `npm run test:browser` — **15/15 PASS**
-- `npm run test:integration` — PASS with disposable local Supabase, migrations `001–012`, Auth/PostgREST/RLS/Edge Functions, public recruitment settings, recurring schedule materialization, Markdown individual/team submission and real local Vault operations
+- `npm run test:integration` — PASS with disposable local Supabase, migrations `001–013`, Auth/PostgREST/RLS/Edge Functions, public recruitment settings, timed/all-day recurring schedule materialization, Markdown individual/team submission and real local Vault operations
 - ProjectDB compatibility branch/main: `python3 -m unittest discover -s tests -v` — **23 passing**
 - `git diff --check` — PASS for ASC_WEB gate
 - hosted Supabase migration 012 — DEPLOYED; post-deploy dry-run reports up to date

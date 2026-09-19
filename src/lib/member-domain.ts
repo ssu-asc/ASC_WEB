@@ -43,6 +43,7 @@ export interface Assignment {
   round_key: string;
   active: boolean;
   version: number;
+  all_day: boolean;
   schedule_series_id?: string | null;
   occurrence_index?: number | null;
 }
@@ -92,6 +93,7 @@ export interface ScheduleEvent {
   end_at: string | null;
   link_url: string | null;
   version: number;
+  all_day: boolean;
   schedule_series_id?: string | null;
   occurrence_index?: number | null;
 }
@@ -105,6 +107,7 @@ export interface ScheduleSeries {
   event_category: Exclude<EventCategory, "project"> | null;
   project_pattern: ScheduleProjectPattern | null;
   link_url: string | null;
+  all_day: boolean;
   first_start_at: string;
   first_end_at: string;
   recurrence_frequency: ScheduleRecurrenceFrequency;
@@ -126,6 +129,7 @@ export interface ScheduleItem {
   start_at: string;
   end_at: string | null;
   link_url: string | null;
+  all_day: boolean;
   schedule_series_id?: string | null;
   occurrence_index?: number | null;
 }
@@ -604,6 +608,7 @@ export function mergeScheduleItems(input: { assignments: Assignment[]; events: S
       id: `assignment:${assignment.id}`, source: "assignment" as const, title: assignment.title,
       category: "project" as const, project_type: assignment.project_type, description: assignment.description,
       start_at: assignment.opens_at!, end_at: assignment.due_at, link_url: null,
+      all_day: assignment.all_day,
       schedule_series_id: assignment.schedule_series_id ?? null,
       occurrence_index: assignment.occurrence_index ?? null,
     }));
@@ -618,6 +623,7 @@ export interface EventDraft {
   start_at: string;
   end_at: string | null;
   link_url: string | null;
+  all_day: boolean;
 }
 export function validateEventDraft(draft: EventDraft): { ok: true } | { ok: false; message: string } {
   if (draft.title.trim().length < 1 || draft.title.trim().length > 160) return { ok: false, message: "일정 제목은 1~160자로 입력해 주세요." };

@@ -16,6 +16,7 @@ type Body = {
   event_category?: EventCategory | null;
   project_pattern?: ProjectPattern | null;
   link_url?: string | null;
+  all_day?: boolean;
   first_start_at?: string;
   first_end_at?: string;
   recurrence_frequency?: RecurrenceFrequency;
@@ -35,6 +36,7 @@ type SeriesRow = {
   event_category: EventCategory | null;
   project_pattern: ProjectPattern | null;
   link_url: string | null;
+  all_day: boolean;
   first_start_at: string;
   first_end_at: string;
   recurrence_frequency: RecurrenceFrequency;
@@ -47,7 +49,7 @@ type SeriesRow = {
   version: number;
 };
 
-const SERIES_FIELDS = "id,semester,kind,title,description,event_category,project_pattern,link_url,first_start_at,first_end_at,recurrence_frequency,recurrence_interval,weekdays,end_mode,occurrence_count,until_at,active,version";
+const SERIES_FIELDS = "id,semester,kind,title,description,event_category,project_pattern,link_url,all_day,first_start_at,first_end_at,recurrence_frequency,recurrence_interval,weekdays,end_mode,occurrence_count,until_at,active,version";
 const EVENT_CATEGORIES = new Set<EventCategory>(["seminar", "ctf", "meeting", "presentation", "other"]);
 const PROJECT_PATTERNS = new Set<ProjectPattern>(["individual", "team", "alternating"]);
 const FREQUENCIES = new Set<RecurrenceFrequency>(["none", "daily", "weekly", "monthly"]);
@@ -71,6 +73,18 @@ function cleanDate(value: unknown, label: string): string {
   return date.toISOString();
 }
 
+function kstDate(value: string): string {
+  return new Date(new Date(value).valueOf() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function allDayStart(value: string): string {
+  return new Date(`${kstDate(value)}T00:00:00+09:00`).toISOString();
+}
+
+function allDayEnd(value: string): string {
+  return new Date(`${kstDate(value)}T23:59:59.999+09:00`).toISOString();
+}
+
 function cleanUrl(value: unknown): string | null {
   if (value === null || value === undefined || value === "") return null;
   if (typeof value !== "string") throw new HttpError(400, "일정 링크를 확인해 주세요.");
@@ -88,8 +102,11 @@ function cleanSeries(body: Body) {
   const description = typeof body.description === "string" ? body.description.trim() : "";
   if (description.length > 4000) throw new HttpError(400, "일정 설명은 4000자 이하로 입력해 주세요.");
 
-  const firstStart = cleanDate(body.first_start_at, kind === "project" ? "첫 제출 시작 시간" : "첫 시작 시간");
-  const firstEnd = cleanDate(body.first_end_at, kind === "project" ? "첫 마감 시간" : "첫 종료 시간");
+  const allDay = body.all_day === true;
+  const rawFirstStart = cleanDate(body.first_start_at, kind === "project" ? "첫 제출 시작 시간" : "첫 시작 시간");
+  const rawFirstEnd = cleanDate(body.first_end_at, kind === "project" ? "첫 마감 시간" : "첫 종료 시간");
+  const firstStart = allDay ? allDayStart(rawFirstStart) : rawFirstStart;
+  const firstEnd = allDay ? allDayEnd(rawFirstEnd) : rawFirstEnd;
   if (new Date(firstEnd).valueOf() <= new Date(firstStart).valueOf()) throw new HttpError(400, "종료 시간은 시작 시간 이후여야 합니다.");
 
   const frequency = body.recurrence_frequency;
@@ -119,7 +136,8 @@ function cleanSeries(body: Body) {
       occurrenceCount = Number(body.occurrence_count);
       if (!Number.isInteger(occurrenceCount) || occurrenceCount < 1 || occurrenceCount > 500) throw new HttpError(400, "반복 횟수는 1~500회로 입력해 주세요.");
     } else if (endMode === "until") {
-      untilAt = cleanDate(body.until_at, "반복 종료일");
+      const rawUntil = cleanDate(body.until_at, "반복 종료일");
+      untilAt = allDay ? allDayEnd(rawUntil) : rawUntil;
       if (new Date(untilAt).valueOf() < new Date(firstStart).valueOf()) throw new HttpError(400, "반복 종료일은 첫 일정 이후여야 합니다.");
     }
   }
@@ -141,6 +159,7 @@ function cleanSeries(body: Body) {
     event_category: eventCategory,
     project_pattern: projectPattern,
     link_url: kind === "event" ? cleanUrl(body.link_url) : null,
+    all_day: allDay,
     first_start_at: firstStart,
     first_end_at: firstEnd,
     recurrence_frequency: recurrenceFrequency,
@@ -182,6 +201,7 @@ async function materializeSeries(client: Awaited<ReturnType<typeof requireUser>>
         start_at: occurrence.start_at,
         end_at: occurrence.end_at,
         link_url: series.link_url,
+        all_day: series.all_day,
         schedule_series_id: series.id,
         occurrence_index: occurrence.index,
         updated_at: new Date().toISOString(),
@@ -197,6 +217,7 @@ async function materializeSeries(client: Awaited<ReturnType<typeof requireUser>>
       p_description: series.description,
       p_opens_at: occurrence.start_at,
       p_due_at: occurrence.end_at,
+      p_all_day: series.all_day,
     });
     if (error) throw error;
   }
