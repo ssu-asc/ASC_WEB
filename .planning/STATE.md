@@ -126,6 +126,7 @@ Remote migration history is current through:
 202609160010
 202609160011
 202609190012
+202609190013
 ```
 
 A post-deploy `supabase db push --dry-run` reports the remote database is up to date.
@@ -155,13 +156,13 @@ Latest local evidence for Phase 10:
 - `npm run test:integration` — PASS with disposable local Supabase, migrations `001–013`, Auth/PostgREST/RLS/Edge Functions, public recruitment settings, timed/all-day recurring schedule materialization, Markdown individual/team submission and real local Vault operations
 - ProjectDB compatibility branch/main: `python3 -m unittest discover -s tests -v` — **23 passing**
 - `git diff --check` — PASS for ASC_WEB gate
-- hosted Supabase migration 012 — DEPLOYED; post-deploy dry-run reports up to date
+- hosted Supabase migration 013 — DEPLOYED; post-deploy dry-run reports up to date
 - hosted `submission-write` v8 / `submission-admin` v7 — ACTIVE
-- hosted `operations-settings` v8 / `schedule-series` v1 — ACTIVE
-- hosted Edge smoke — PASS for `team-admin`, `operations-settings`, `staff-secrets`, and `schedule-series`
+- hosted `assignment-admin` v7 / `operations-settings` v8 / `schedule-series` v2 — ACTIVE
+- hosted Edge smoke — PASS for `team-admin`, `assignment-admin`, `operations-settings`, `staff-secrets`, and `schedule-series`
 - hosted public recruitment singleton — verified `enabled=false` after migration 012; the homepage popup is off until staff explicitly enables it
-- Cloudflare Pages production deployment `f075e61c-942d-4dc6-a9d1-a551211b07c9` — project `asc-web`, branch `main`, source `1f33e2b`, schedule bulk-delete deployment PASS
-- production domain smoke — `https://ssu-asc.com/member/schedule/` returns 200; production schedule bundle contains recurrence controls plus `일괄 수정 / 전체 선택 / 날짜 이동 / 선택 일정 저장 / 선택 삭제 / 전체 삭제`, submission-protection messaging, and recurring-series shutdown handling
+- Cloudflare Pages production deployment `e277c6b6-12dd-4ae6-a7fb-41b6421339e9` — project `asc-web`, branch `main`, source `ee0ee56`, all-day schedule deployment PASS
+- production domain smoke — `https://ssu-asc.com/member/schedule/` returns 200; production schedule bundle contains `하루 종일`, date-only inputs/rendering, recurrence controls, and bulk all-day toggles alongside bulk edit/delete controls
 - public homepage performance — First Load JS remains **163 kB** by reading the public recruitment singleton through a lightweight REST request rather than loading the full Supabase client
 
 Integration coverage includes:
@@ -174,6 +175,7 @@ Integration coverage includes:
 - public recruitment default-off RLS/read boundary plus staff-only optimistic configuration updates
 - recurring calendar rules for ordinary events and project submissions, including multi-weekday weekly recurrence, finite/until/never endings, and rolling materialization
 - recurring project patterns materialize normal individual/team/alternating assignments while preserving the existing submission/review model
+- all-day ordinary/project schedules persist `all_day=true`, normalize Korea-local boundaries to `00:00 → 23:59:59.999`, and materialize recurring occurrences with the same flag
 - Markdown upload validation, draft persistence, individual/team shared submission behavior, stale resubmission conflicts, and durable review/sync states
 - deterministic individual/team ProjectDB report frontmatter/path generation
 - ProjectDB legacy validator compatibility plus `source: asc_web` individual/team fixtures and individual tracking skip
