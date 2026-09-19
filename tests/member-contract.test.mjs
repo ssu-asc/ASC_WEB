@@ -340,6 +340,24 @@ test('project rounds are administered through a staff edge function and recurrin
   assert.match(page, /generateScheduleOccurrences/);
 });
 
+test('schedule supports true all-day events and project submission windows', () => {
+  const migration = read('supabase/migrations/202609190013_all_day_schedule.sql');
+  assert.match(migration, /alter table public\.events[\s\S]*all_day boolean not null default false/i);
+  assert.match(migration, /alter table public\.assignments[\s\S]*all_day boolean not null default false/i);
+  assert.match(migration, /alter table public\.schedule_series[\s\S]*all_day boolean not null default false/i);
+  assert.match(migration, /p_all_day boolean/i);
+  const series = read('supabase/functions/schedule-series/index.ts');
+  assert.match(series, /all_day/);
+  assert.match(series, /p_all_day/);
+  const assignment = read('supabase/functions/assignment-admin/index.ts');
+  assert.match(assignment, /all_day/);
+  const page = read('src/app/member/schedule/page.tsx');
+  assert.match(page, /하루 종일/);
+  assert.match(page, /type=\{allDay \? ["']date["'] : ["']datetime-local["']\}/);
+  assert.match(page, /displayScheduleRange/);
+  assert.match(page, /updateBulkAllDay/);
+});
+
 test('staff schedule supports bulk editing multiple existing occurrences', () => {
   const page = read('src/app/member/schedule/page.tsx');
   for (const label of ['일괄 수정', '전체 선택', '선택 일정 날짜 이동', '이동 적용', '선택 일정 저장', '선택 삭제', '전체 삭제']) assert.match(page, new RegExp(label));

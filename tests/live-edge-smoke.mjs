@@ -22,9 +22,10 @@ function readPublicEnv() {
 }
 
 const { url, publishable } = readPublicEnv();
-const functions = ['team-admin', 'operations-settings', 'staff-secrets', 'schedule-series'];
+const functions = ['team-admin', 'assignment-admin', 'operations-settings', 'staff-secrets', 'schedule-series'];
 const smokeBodies = {
   'team-admin': { action: 'create_team', name: 'network-smoke-only' },
+  'assignment-admin': { action: 'create', project_type: 'individual', title: 'network-smoke-only', description: '', opens_at: new Date().toISOString(), due_at: new Date(Date.now() + 60_000).toISOString(), all_day: false },
   'operations-settings': { action: 'create_link', title: 'network-smoke-only', description: '', url: 'https://example.com', service: 'other', category: 'other', audience: 'staff' },
   'staff-secrets': { action: 'list' },
   'schedule-series': { action: 'materialize' },

@@ -47,6 +47,7 @@ type BulkEditRow = {
   title: string;
   start: string;
   end: string;
+  allDay: boolean;
 };
 
 const categoryLabels: Record<EventCategory, string> = {
@@ -67,6 +68,13 @@ function localInput(iso: string | null): string {
   return `${value.year}-${value.month}-${value.day}T${value.hour}:${value.minute}`;
 }
 
+function dateInput(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (!Number.isFinite(date.valueOf())) return "";
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
 function inputToIso(value: string): string {
   if (!value) throw new Error("시간을 입력해 주세요.");
   const date = new Date(`${value}:00+09:00`);
@@ -74,9 +82,32 @@ function inputToIso(value: string): string {
   return date.toISOString();
 }
 
+function dateInputToIso(value: string, endOfDay = false): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("날짜를 확인해 주세요.");
+  const date = new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00"}+09:00`);
+  if (!Number.isFinite(date.valueOf())) throw new Error("날짜를 확인해 주세요.");
+  return date.toISOString();
+}
+
+function editorInputToIso(value: string, allDay: boolean, endOfDay = false): string {
+  return allDay ? dateInputToIso(value, endOfDay) : inputToIso(value);
+}
+
 function displayDate(value: string): string {
   const date = new Date(value);
   return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+}
+
+function displayDateOnly(value: string): string {
+  const date = new Date(value);
+  return new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", weekday: "short" }).format(date);
+}
+
+function displayScheduleRange(item: Pick<ScheduleItem, "start_at" | "end_at" | "all_day">): string {
+  if (!item.all_day) return `${displayDate(item.start_at)}${item.end_at ? ` → ${displayDate(item.end_at)}` : ""}`;
+  const start = displayDateOnly(item.start_at);
+  const end = item.end_at ? displayDateOnly(item.end_at) : start;
+  return start === end ? `${start} · 하루 종일` : `${start} → ${end} · 하루 종일`;
 }
 
 function dateKey(value: string): string {
@@ -98,24 +129,34 @@ function itemLabel(item: ScheduleItem): string {
 
 function kstWeekdayFromInput(value: string): number {
   if (!value) return 1;
-  const ms = new Date(`${value}:00+09:00`).valueOf();
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00+09:00` : `${value}:00+09:00`;
+  const ms = new Date(normalized).valueOf();
   if (!Number.isFinite(ms)) return 1;
   return new Date(ms + 9 * 60 * 60 * 1000).getUTCDay();
 }
 
 function recurrenceSummary(series: ScheduleSeries): string {
-  if (series.recurrence_frequency === "none") return "1회";
+  if (series.recurrence_frequency === "none") return series.all_day ? "1회 · 하루 종일" : "1회";
   const interval = series.recurrence_interval === 1 ? recurrenceLabels[series.recurrence_frequency] : `매 ${series.recurrence_interval}${series.recurrence_frequency === "daily" ? "일" : series.recurrence_frequency === "weekly" ? "주" : "개월"}`;
   const weekdays = series.recurrence_frequency === "weekly" ? ` · ${series.weekdays.map((day) => weekdayLabels[day]).join("·")}` : "";
-  const end = series.end_mode === "never" ? "계속" : series.end_mode === "count" ? `${series.occurrence_count}회` : `${series.until_at ? displayDate(series.until_at) : "종료일"}까지`;
-  return `${interval}${weekdays} · ${end}`;
+  const end = series.end_mode === "never" ? "계속" : series.end_mode === "count" ? `${series.occurrence_count}회` : `${series.until_at ? (series.all_day ? displayDateOnly(series.until_at) : displayDate(series.until_at)) : "종료일"}까지`;
+  return `${interval}${weekdays} · ${end}${series.all_day ? " · 하루 종일" : ""}`;
 }
 
 function shiftLocalInput(value: string, days: number): string {
   if (!value || !Number.isFinite(days) || days === 0) return value;
-  const time = new Date(`${value}:00+09:00`).valueOf();
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const time = new Date(isDateOnly ? `${value}T00:00:00+09:00` : `${value}:00+09:00`).valueOf();
   if (!Number.isFinite(time)) return value;
-  return localInput(new Date(time + days * 24 * 60 * 60 * 1000).toISOString());
+  const shifted = new Date(time + days * 24 * 60 * 60 * 1000).toISOString();
+  return isDateOnly ? dateInput(shifted) : localInput(shifted);
+}
+
+function convertEditorValue(value: string, toAllDay: boolean, endBoundary = false): string {
+  if (!value) return value;
+  if (toAllDay) return value.slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${value}T${endBoundary ? "23:59" : "00:00"}`;
+  return value;
 }
 
 function ScheduleView({ profile }: { profile: Profile }) {
@@ -133,6 +174,7 @@ function ScheduleView({ profile }: { profile: Profile }) {
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [link, setLink] = useState("");
+  const [allDay, setAllDay] = useState(false);
   const [frequency, setFrequency] = useState<ScheduleRecurrenceFrequency>("none");
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
   const [weekdays, setWeekdays] = useState<number[]>([]);
@@ -173,7 +215,7 @@ function ScheduleView({ profile }: { profile: Profile }) {
 
   const resetEditor = () => {
     setEditing(null); setMode("event"); setTitle(""); setCategory("other"); setProjectPattern("individual"); setDescription("");
-    setStart(""); setEnd(""); setLink(""); setFrequency("none"); setRecurrenceInterval(1); setWeekdays([]);
+    setStart(""); setEnd(""); setLink(""); setAllDay(false); setFrequency("none"); setRecurrenceInterval(1); setWeekdays([]);
     setEndMode("count"); setOccurrenceCount(8); setUntil(""); setMessage(null);
   };
 
@@ -181,14 +223,19 @@ function ScheduleView({ profile }: { profile: Profile }) {
 
   const openEditEvent = (event: ScheduleEvent) => {
     setEditing({ kind: "event", event }); setMode("event"); setTitle(event.title); setCategory(event.category === "project" ? "other" : event.category);
-    setDescription(event.description); setStart(localInput(event.start_at)); setEnd(localInput(event.end_at)); setLink(event.link_url ?? "");
+    setDescription(event.description); setAllDay(event.all_day);
+    setStart(event.all_day ? dateInput(event.start_at) : localInput(event.start_at));
+    setEnd(event.all_day ? dateInput(event.end_at ?? event.start_at) : localInput(event.end_at));
+    setLink(event.link_url ?? "");
     setFrequency("none"); setRecurrenceInterval(1); setWeekdays([]); setEndMode("count"); setOccurrenceCount(1); setUntil("");
     setMessage(null); setShowForm(true);
   };
 
   const openEditAssignment = (assignment: Assignment) => {
     setEditing({ kind: "assignment", assignment }); setMode("project"); setTitle(assignment.title); setProjectPattern(assignment.project_type);
-    setDescription(assignment.description); setStart(localInput(assignment.opens_at)); setEnd(localInput(assignment.due_at)); setLink("");
+    setDescription(assignment.description); setAllDay(assignment.all_day);
+    setStart(assignment.all_day ? dateInput(assignment.opens_at) : localInput(assignment.opens_at));
+    setEnd(assignment.all_day ? dateInput(assignment.due_at) : localInput(assignment.due_at)); setLink("");
     setFrequency("none"); setRecurrenceInterval(1); setWeekdays([]); setEndMode("count"); setOccurrenceCount(1); setUntil("");
     setMessage(null); setShowForm(true);
   };
@@ -197,11 +244,13 @@ function ScheduleView({ profile }: { profile: Profile }) {
     setEditing({ kind: "series", series });
     setMode(series.kind);
     setTitle(series.title); setDescription(series.description); setLink(series.link_url ?? "");
+    setAllDay(series.all_day);
     if (series.event_category) setCategory(series.event_category);
     if (series.project_pattern) setProjectPattern(series.project_pattern);
-    setStart(localInput(series.first_start_at)); setEnd(localInput(series.first_end_at));
+    setStart(series.all_day ? dateInput(series.first_start_at) : localInput(series.first_start_at));
+    setEnd(series.all_day ? dateInput(series.first_end_at) : localInput(series.first_end_at));
     setFrequency(series.recurrence_frequency); setRecurrenceInterval(series.recurrence_interval); setWeekdays(series.weekdays);
-    setEndMode(series.end_mode); setOccurrenceCount(series.occurrence_count ?? 8); setUntil(localInput(series.until_at));
+    setEndMode(series.end_mode); setOccurrenceCount(series.occurrence_count ?? 8); setUntil(series.all_day ? dateInput(series.until_at) : localInput(series.until_at));
     setMessage(null); setShowForm(true);
   };
 
@@ -211,14 +260,21 @@ function ScheduleView({ profile }: { profile: Profile }) {
     else if (value === "weekly" && weekdays.length === 0) setWeekdays([kstWeekdayFromInput(start)]);
   };
 
+  const changeAllDay = (next: boolean) => {
+    setStart((value) => convertEditorValue(value, next, false));
+    setEnd((value) => convertEditorValue(value || start, next, true));
+    setUntil((value) => convertEditorValue(value, next, true));
+    setAllDay(next);
+  };
+
   const toggleWeekday = (day: number) => {
     setWeekdays((current) => current.includes(day) ? current.filter((value) => value !== day) : [...current, day].sort((a, b) => a - b));
   };
 
   const buildSeriesDraft = (): ScheduleSeriesDraft => {
     if (!title.trim()) throw new Error("제목을 입력해 주세요.");
-    const firstStart = inputToIso(start);
-    const firstEnd = inputToIso(end);
+    const firstStart = editorInputToIso(start, allDay, false);
+    const firstEnd = editorInputToIso(end || start, allDay, true);
     if (new Date(firstEnd).valueOf() <= new Date(firstStart).valueOf()) throw new Error(mode === "project" ? "마감 시간은 제출 시작 이후여야 합니다." : "종료 시간은 시작 이후여야 합니다.");
     return {
       kind: mode,
@@ -227,6 +283,7 @@ function ScheduleView({ profile }: { profile: Profile }) {
       event_category: mode === "event" ? category : null,
       project_pattern: mode === "project" ? projectPattern : null,
       link_url: mode === "event" ? link.trim() || null : null,
+      all_day: allDay,
       first_start_at: firstStart,
       first_end_at: firstEnd,
       recurrence_frequency: frequency,
@@ -234,12 +291,12 @@ function ScheduleView({ profile }: { profile: Profile }) {
       weekdays: frequency === "weekly" ? weekdays : [],
       end_mode: frequency === "none" ? "count" : endMode,
       occurrence_count: frequency === "none" ? 1 : endMode === "count" ? occurrenceCount : null,
-      until_at: frequency !== "none" && endMode === "until" ? inputToIso(until) : null,
+      until_at: frequency !== "none" && endMode === "until" ? editorInputToIso(until, allDay, true) : null,
     };
   };
 
   const seriesPreview = useMemo(() => {
-    if (!start || !end || !title.trim()) return [];
+    if (!start || (!end && !allDay) || !title.trim()) return [];
     try {
       const draft = buildSeriesDraft();
       return generateScheduleOccurrences(draft, {
@@ -248,14 +305,20 @@ function ScheduleView({ profile }: { profile: Profile }) {
       });
     } catch { return []; }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, title, start, end, frequency, recurrenceInterval, weekdays, endMode, occurrenceCount, until, category, projectPattern, description, link]);
+  }, [mode, title, start, end, allDay, frequency, recurrenceInterval, weekdays, endMode, occurrenceCount, until, category, projectPattern, description, link]);
 
   const persist = async () => {
     if (!client || view.status !== "ready" || !view.data.semester) return;
     setBusy(true); setMessage(null);
     try {
       if (editing?.kind === "event") {
-        const eventDraft: EventDraft = { title, category, description, start_at: inputToIso(start), end_at: end ? inputToIso(end) : null, link_url: link.trim() || null };
+        const eventDraft: EventDraft = {
+          title, category, description,
+          start_at: editorInputToIso(start, allDay, false),
+          end_at: allDay ? editorInputToIso(end || start, true, true) : end ? inputToIso(end) : null,
+          link_url: link.trim() || null,
+          all_day: allDay,
+        };
         const validation = validateEventDraft(eventDraft);
         if (!validation.ok) throw new Error(validation.message);
         await saveEvent(client, profile, view.data.semester.id, eventDraft, editing.event);
@@ -264,7 +327,8 @@ function ScheduleView({ profile }: { profile: Profile }) {
         await saveAssignment(client, {
           project_type: projectPattern,
           title: title.trim(), description,
-          opens_at: inputToIso(start), due_at: inputToIso(end),
+          opens_at: editorInputToIso(start, allDay, false), due_at: editorInputToIso(end || start, allDay, true),
+          all_day: allDay,
         }, editing.assignment);
       } else {
         const draft = buildSeriesDraft();
@@ -311,8 +375,9 @@ function ScheduleView({ profile }: { profile: Profile }) {
       key: item.id,
       item,
       title: item.title,
-      start: localInput(item.start_at),
-      end: localInput(item.end_at),
+      start: item.all_day ? dateInput(item.start_at) : localInput(item.start_at),
+      end: item.all_day ? dateInput(item.end_at ?? item.start_at) : localInput(item.end_at),
+      allDay: item.all_day,
     } satisfies BulkEditRow]));
     setBulkRows(rows);
     setBulkSelected([]);
@@ -338,6 +403,22 @@ function ScheduleView({ profile }: { profile: Profile }) {
 
   const updateBulkRow = (key: string, field: "title" | "start" | "end", value: string) => {
     setBulkRows((current) => ({ ...current, [key]: { ...current[key], [field]: value } }));
+  };
+
+  const updateBulkAllDay = (key: string, next: boolean) => {
+    setBulkRows((current) => {
+      const row = current[key];
+      if (!row) return current;
+      return {
+        ...current,
+        [key]: {
+          ...row,
+          allDay: next,
+          start: convertEditorValue(row.start, next, false),
+          end: convertEditorValue(row.end || row.start, next, true),
+        },
+      };
+    });
   };
 
   const shiftSelectedBulkRows = () => {
@@ -368,9 +449,10 @@ function ScheduleView({ profile }: { profile: Profile }) {
               title: row.title.trim(),
               category: event.category,
               description: event.description,
-              start_at: inputToIso(row.start),
-              end_at: row.end ? inputToIso(row.end) : null,
+              start_at: editorInputToIso(row.start, row.allDay, false),
+              end_at: row.allDay ? editorInputToIso(row.end || row.start, true, true) : row.end ? inputToIso(row.end) : null,
               link_url: event.link_url,
+              all_day: row.allDay,
             };
             const validation = validateEventDraft(draft);
             if (!validation.ok) throw new Error(validation.message);
@@ -378,8 +460,8 @@ function ScheduleView({ profile }: { profile: Profile }) {
           } else {
             const assignment = view.data.assignments.find((candidate) => `assignment:${candidate.id}` === row.item.id);
             if (!assignment) throw new Error("프로젝트 회차 원본을 찾을 수 없습니다.");
-            const opensAt = inputToIso(row.start);
-            const dueAt = inputToIso(row.end);
+            const opensAt = editorInputToIso(row.start, row.allDay, false);
+            const dueAt = editorInputToIso(row.end || row.start, row.allDay, true);
             if (new Date(dueAt).valueOf() <= new Date(opensAt).valueOf()) throw new Error("마감은 제출 시작 이후여야 합니다.");
             await saveAssignment(client, {
               project_type: assignment.project_type,
@@ -387,6 +469,7 @@ function ScheduleView({ profile }: { profile: Profile }) {
               description: assignment.description,
               opens_at: opensAt,
               due_at: dueAt,
+              all_day: row.allDay,
             }, assignment);
           }
           saved += 1;
@@ -479,7 +562,7 @@ function ScheduleView({ profile }: { profile: Profile }) {
     {view.status === "loading" && <p className={styles.notice}>일정을 불러오고 있습니다.</p>}
     {view.status === "error" && <section className={styles.notice} role="alert"><p>{view.message}</p><button className={styles.button} onClick={() => reload((value) => value + 1)}>다시 불러오기</button></section>}
     {view.status === "ready" && <>
-      <section className={styles.scheduleSection}><h2>다가오는 일정</h2>{upcoming.length === 0 ? <p className={styles.helper}>다가오는 일정이 없습니다.</p> : <div className={styles.upcomingList}>{upcoming.map((item) => <article key={item.id}><span className={styles.scheduleCategory}>{itemLabel(item)}</span><div><strong>{item.title}</strong><p>{displayDate(item.start_at)}{item.end_at ? ` → ${displayDate(item.end_at)}` : ""}</p></div>{item.link_url && <a className={styles.textLink} href={item.link_url} target="_blank" rel="noopener noreferrer">링크 ↗</a>}</article>)}</div>}</section>
+      <section className={styles.scheduleSection}><h2>다가오는 일정</h2>{upcoming.length === 0 ? <p className={styles.helper}>다가오는 일정이 없습니다.</p> : <div className={styles.upcomingList}>{upcoming.map((item) => <article key={item.id}><span className={styles.scheduleCategory}>{itemLabel(item)}</span><div><strong>{item.title}</strong><p>{displayScheduleRange(item)}</p></div>{item.link_url && <a className={styles.textLink} href={item.link_url} target="_blank" rel="noopener noreferrer">링크 ↗</a>}</article>)}</div>}</section>
 
       <section className={styles.calendarCard}>
         <div className={styles.calendarHeader}><button className={styles.smallButton} onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>이전</button><h2>{month.getFullYear()}년 {month.getMonth() + 1}월</h2><button className={styles.smallButton} onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}>다음</button></div>
@@ -523,7 +606,7 @@ function ScheduleView({ profile }: { profile: Profile }) {
             <button className={styles.dangerButton} type="button" disabled={busy || items.length === 0 && view.data.series.length === 0} onClick={() => void deleteBulkRows(true)}>전체 삭제</button>
           </div>
           <div className={styles.bulkScheduleWrap}><table className={styles.bulkScheduleTable}>
-            <thead><tr><th>선택</th><th>종류</th><th>제목</th><th>시작</th><th>종료 / 마감</th><th>비고</th></tr></thead>
+            <thead><tr><th>선택</th><th>종류</th><th>제목</th><th>하루 종일</th><th>시작</th><th>종료 / 마감</th><th>비고</th></tr></thead>
             <tbody>{items.map((item) => {
               const row = bulkRows[item.id];
               const selected = bulkSelected.includes(item.id);
@@ -531,14 +614,15 @@ function ScheduleView({ profile }: { profile: Profile }) {
                 <td><input type="checkbox" aria-label={`${item.title} 선택`} checked={selected} onChange={() => toggleBulkItem(item.id)} /></td>
                 <td><span className={styles.scheduleCategory}>{itemLabel(item)}</span></td>
                 <td><input className={styles.bulkScheduleInput} disabled={!selected} value={row?.title ?? item.title} onChange={(event) => updateBulkRow(item.id, "title", event.target.value)} /></td>
-                <td><input className={styles.bulkScheduleInput} type="datetime-local" disabled={!selected} value={row?.start ?? localInput(item.start_at)} onChange={(event) => updateBulkRow(item.id, "start", event.target.value)} /></td>
-                <td><input className={styles.bulkScheduleInput} type="datetime-local" disabled={!selected} value={row?.end ?? localInput(item.end_at)} onChange={(event) => updateBulkRow(item.id, "end", event.target.value)} /></td>
+                <td className={styles.bulkAllDayCell}><input type="checkbox" aria-label={`${item.title} 하루 종일`} disabled={!selected} checked={row?.allDay ?? item.all_day} onChange={(event) => updateBulkAllDay(item.id, event.target.checked)} /></td>
+                <td><input className={styles.bulkScheduleInput} type={(row?.allDay ?? item.all_day) ? "date" : "datetime-local"} disabled={!selected} value={row?.start ?? (item.all_day ? dateInput(item.start_at) : localInput(item.start_at))} onChange={(event) => updateBulkRow(item.id, "start", event.target.value)} /></td>
+                <td><input className={styles.bulkScheduleInput} type={(row?.allDay ?? item.all_day) ? "date" : "datetime-local"} disabled={!selected} value={row?.end ?? (item.all_day ? dateInput(item.end_at ?? item.start_at) : localInput(item.end_at))} onChange={(event) => updateBulkRow(item.id, "end", event.target.value)} /></td>
                 <td>{item.schedule_series_id ? <span className={styles.secondary}>반복 생성 회차</span> : <span className={styles.secondary}>개별 일정</span>}</td>
               </tr>;
             })}</tbody>
           </table></div>
         </> : <div className={styles.scheduleList}>{items.map((item) => <article key={item.id}>
-          <div><span className={styles.scheduleCategory}>{itemLabel(item)}</span><strong>{item.title}</strong><p>{displayDate(item.start_at)}{item.end_at ? ` → ${displayDate(item.end_at)}` : ""}</p>{item.description && <p>{item.description}</p>}</div>
+          <div><span className={styles.scheduleCategory}>{itemLabel(item)}</span><strong>{item.title}</strong><p>{displayScheduleRange(item)}</p>{item.description && <p>{item.description}</p>}</div>
           <div className={styles.actions}>{item.link_url && <a className={styles.textLink} href={item.link_url} target="_blank" rel="noopener noreferrer">링크 ↗</a>}{staff && <button className={styles.smallButton} onClick={() => editItem(item)}>{item.schedule_series_id ? "반복 규칙 수정" : "수정"}</button>}</div>
         </article>)}</div>}
         {items.length === 0 && <p className={styles.notice}>등록된 일정이 없습니다.</p>}
@@ -550,11 +634,16 @@ function ScheduleView({ profile }: { profile: Profile }) {
 
       {!editing && <label className={styles.field}>일정 종류<select value={mode} onChange={(event) => setMode(event.target.value as EditorMode)}><option value="event">일반 일정</option><option value="project">프로젝트 제출</option></select></label>}
 
+      <label className={styles.toggleField}>
+        <input type="checkbox" checked={allDay} onChange={(event) => changeAllDay(event.target.checked)} />
+        <span>하루 종일</span>
+      </label>
+
       <div className={styles.formGrid}>
         <label className={styles.field}>제목<input value={title} maxLength={160} onChange={(event) => setTitle(event.target.value)} placeholder={mode === "project" ? "예: ASC 프로젝트" : "예: 정기 세미나"} /></label>
         {mode === "event" ? <label className={styles.field}>분류<select value={category} onChange={(event) => setCategory(event.target.value as Exclude<EventCategory, "project">)}>{generalCategories.map((value) => <option key={value} value={value}>{categoryLabels[value]}</option>)}</select></label> : <label className={styles.field}>제출 방식<select value={projectPattern} onChange={(event) => setProjectPattern(event.target.value as ScheduleProjectPattern)}><option value="individual">개인 프로젝트</option><option value="team">팀 프로젝트</option><option value="alternating">개인 ↔ 팀 교대</option></select></label>}
-        <label className={styles.field}>{mode === "project" ? "첫 제출 시작" : "첫 시작"}<input type="datetime-local" value={start} onChange={(event) => setStart(event.target.value)} /></label>
-        <label className={styles.field}>{mode === "project" ? "첫 마감" : "첫 종료"}<input type="datetime-local" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
+        <label className={styles.field}>{mode === "project" ? (allDay ? "첫 제출 시작일" : "첫 제출 시작") : (allDay ? "첫 시작일" : "첫 시작")}<input type={allDay ? "date" : "datetime-local"} value={start} onChange={(event) => setStart(event.target.value)} /></label>
+        <label className={styles.field}>{mode === "project" ? (allDay ? "첫 마감일" : "첫 마감") : (allDay ? "첫 종료일" : "첫 종료")}<input type={allDay ? "date" : "datetime-local"} value={end} onChange={(event) => setEnd(event.target.value)} /><span className={styles.secondary}>{allDay ? "같은 날짜면 그날 23:59까지로 처리합니다." : ""}</span></label>
         {mode === "event" && <label className={styles.field}>링크 <span className={styles.secondary}>선택</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="https://" /></label>}
       </div>
 
@@ -570,7 +659,7 @@ function ScheduleView({ profile }: { profile: Profile }) {
         {frequency !== "none" && <div className={styles.formGrid}>
           <label className={styles.field}>반복 종료<select value={endMode} onChange={(event) => setEndMode(event.target.value as ScheduleRecurrenceEndMode)}><option value="count">횟수 지정</option><option value="until">날짜까지</option><option value="never">계속</option></select></label>
           {endMode === "count" && <label className={styles.field}>총 횟수<input type="number" min={1} max={500} value={occurrenceCount} onChange={(event) => setOccurrenceCount(Number(event.target.value))} /></label>}
-          {endMode === "until" && <label className={styles.field}>종료 날짜/시간<input type="datetime-local" value={until} onChange={(event) => setUntil(event.target.value)} /></label>}
+          {endMode === "until" && <label className={styles.field}>{allDay ? "종료 날짜" : "종료 날짜/시간"}<input type={allDay ? "date" : "datetime-local"} value={until} onChange={(event) => setUntil(event.target.value)} /></label>}
         </div>}
         {endMode === "never" && frequency !== "none" && <p className={styles.helper}>계속 반복은 규칙만 영구 저장합니다. 시스템이 앞으로 약 6개월의 일정을 자동 생성하고, 이후 접속할 때 다음 구간을 계속 채웁니다.</p>}
       </section>}
@@ -579,7 +668,7 @@ function ScheduleView({ profile }: { profile: Profile }) {
 
       {editing?.kind !== "event" && editing?.kind !== "assignment" && seriesPreview.length > 0 && <div className={styles.teamBox}><h2>반복 미리보기</h2><div className={styles.scheduleList}>{seriesPreview.slice(0, 8).map((occurrence) => {
         const projectType = projectPattern === "alternating" ? (occurrence.index % 2 === 0 ? "개인" : "팀") : projectPattern === "team" ? "팀" : "개인";
-        return <article key={occurrence.index}><div>{mode === "project" && <span className={styles.scheduleCategory}>{projectType}</span>}<strong>{frequency === "none" ? title : `${title} ${occurrence.index + 1}회차`}</strong><p>{displayDate(occurrence.start_at)} → {displayDate(occurrence.end_at)}</p></div></article>;
+        return <article key={occurrence.index}><div>{mode === "project" && <span className={styles.scheduleCategory}>{projectType}</span>}<strong>{frequency === "none" ? title : `${title} ${occurrence.index + 1}회차`}</strong><p>{allDay ? `${displayDateOnly(occurrence.start_at)} → ${displayDateOnly(occurrence.end_at)} · 하루 종일` : `${displayDate(occurrence.start_at)} → ${displayDate(occurrence.end_at)}`}</p></div></article>;
       })}</div>{seriesPreview.length >= 8 && <p className={styles.helper}>앞 8개 일정만 미리 보여줍니다.</p>}</div>}
 
       {message && <p className={styles.notice} role="status">{message}</p>}

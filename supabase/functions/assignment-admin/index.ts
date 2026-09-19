@@ -2,9 +2,9 @@ import { corsHeaders, currentSemester, errorResponse, HttpError, json, requireSt
 
 type ProjectType = "individual" | "team";
 type Body =
-  | { action?: "create"; project_type?: ProjectType; title?: string; description?: string; opens_at?: string; due_at?: string }
+  | { action?: "create"; project_type?: ProjectType; title?: string; description?: string; opens_at?: string; due_at?: string; all_day?: boolean }
   | { action?: "create_series"; first_type?: ProjectType; title_prefix?: string; description?: string; first_opens_at?: string; first_due_at?: string; interval_weeks?: number; count?: number }
-  | { action?: "update"; assignment_id?: string; expected_version?: number; title?: string; description?: string; opens_at?: string; due_at?: string }
+  | { action?: "update"; assignment_id?: string; expected_version?: number; title?: string; description?: string; opens_at?: string; due_at?: string; all_day?: boolean }
   | { action?: "deactivate"; assignment_id?: string; expected_version?: number };
 
 function cleanType(value: unknown): ProjectType {
@@ -27,9 +27,20 @@ function cleanDate(value: unknown, label: string): string {
   if (!Number.isFinite(date.valueOf())) throw new HttpError(400, `${label}을 확인해 주세요.`);
   return date.toISOString();
 }
-function cleanWindow(opensValue: unknown, dueValue: unknown): { opensAt: string; dueAt: string } {
-  const opensAt = cleanDate(opensValue, "제출 시작 시간");
-  const dueAt = cleanDate(dueValue, "마감 시간");
+function kstDate(value: string): string {
+  return new Date(new Date(value).valueOf() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+function allDayStart(value: string): string {
+  return new Date(`${kstDate(value)}T00:00:00+09:00`).toISOString();
+}
+function allDayEnd(value: string): string {
+  return new Date(`${kstDate(value)}T23:59:59.999+09:00`).toISOString();
+}
+function cleanWindow(opensValue: unknown, dueValue: unknown, allDay = false): { opensAt: string; dueAt: string } {
+  const rawOpensAt = cleanDate(opensValue, "제출 시작 시간");
+  const rawDueAt = cleanDate(dueValue, "마감 시간");
+  const opensAt = allDay ? allDayStart(rawOpensAt) : rawOpensAt;
+  const dueAt = allDay ? allDayEnd(rawDueAt) : rawDueAt;
   if (new Date(dueAt).valueOf() <= new Date(opensAt).valueOf()) throw new HttpError(400, "마감 시간은 제출 시작 시간 이후여야 합니다.");
   return { opensAt, dueAt };
 }
@@ -53,7 +64,8 @@ Deno.serve(async (req) => {
     const semester = await currentSemester(client);
 
     if (body.action === "create") {
-      const window = cleanWindow(body.opens_at, body.due_at);
+      const allDay = body.all_day === true;
+      const window = cleanWindow(body.opens_at, body.due_at, allDay);
       const { data, error } = await client.rpc("create_assignment_atomic", {
         p_semester: semester,
         p_project_type: cleanType(body.project_type),
@@ -66,6 +78,8 @@ Deno.serve(async (req) => {
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : null;
       if (!row) throw new Error("assignment create returned no result");
+      const allDayUpdate = await client.from("assignments").update({ all_day: allDay }).eq("id", row.assignment_id);
+      if (allDayUpdate.error) throw allDayUpdate.error;
       return json(req, 200, { ok: true, assignment: row });
     }
 
@@ -93,13 +107,15 @@ Deno.serve(async (req) => {
     if (body.action === "update") {
       const assignmentId = cleanId(body.assignment_id);
       const version = cleanVersion(body.expected_version);
-      const window = cleanWindow(body.opens_at, body.due_at);
+      const allDay = body.all_day === true;
+      const window = cleanWindow(body.opens_at, body.due_at, allDay);
       const { data, error } = await client.from("assignments")
         .update({
           title: cleanTitle(body.title),
           description: cleanDescription(body.description),
           opens_at: window.opensAt,
           due_at: window.dueAt,
+          all_day: allDay,
           version: version + 1,
         })
         .eq("id", assignmentId).eq("semester", semester).eq("version", version).eq("active", true)

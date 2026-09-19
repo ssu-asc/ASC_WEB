@@ -33,7 +33,7 @@ import {
 } from "./member-domain";
 
 const PROFILE_FIELDS = "id,member_id,name,role,active,github_username,version";
-const ASSIGNMENT_FIELDS = "id,semester,project_type,title,description,opens_at,due_at,round_key,active,version,schedule_series_id,occurrence_index";
+const ASSIGNMENT_FIELDS = "id,semester,project_type,title,description,opens_at,due_at,round_key,active,version,all_day,schedule_series_id,occurrence_index";
 const SUBMISSION_FIELDS = "id,assignment_id,semester,project_type,owner_id,team_id,title,summary,code_repository_url,report_filename,report_markdown,report_bytes,report_repository_url,report_path,submitted_ref,status,review_note,first_submitted_at,submitted_at,projectdb_sync_status,projectdb_sync_error,projectdb_synced_at,version";
 
 export async function readOwnProfile(client: SupabaseClient, id: string): Promise<Profile> {
@@ -450,6 +450,7 @@ export interface AssignmentDraft {
   description: string;
   opens_at: string;
   due_at: string;
+  all_day: boolean;
 }
 
 export interface AssignmentSeriesDraft {
@@ -466,7 +467,7 @@ export async function saveAssignment(client: SupabaseClient, draft: AssignmentDr
   return assignment
     ? invokePortal<{ ok: true; assignment: { id: string; version: number } }>(client, "assignment-admin", {
         action: "update", assignment_id: assignment.id, expected_version: assignment.version,
-        title: draft.title, description: draft.description, opens_at: draft.opens_at, due_at: draft.due_at,
+        title: draft.title, description: draft.description, opens_at: draft.opens_at, due_at: draft.due_at, all_day: draft.all_day,
       })
     : invokePortal<{ ok: true; assignment: { assignment_id: string; round_key: string; assignment_version: number } }>(client, "assignment-admin", {
         action: "create", ...draft,
@@ -492,6 +493,7 @@ export interface ScheduleSeriesDraft {
   event_category: Exclude<ScheduleEvent["category"], "project"> | null;
   project_pattern: ScheduleProjectPattern | null;
   link_url: string | null;
+  all_day: boolean;
   first_start_at: string;
   first_end_at: string;
   recurrence_frequency: ScheduleRecurrenceFrequency;
@@ -537,9 +539,9 @@ export async function readSchedule(client: SupabaseClient): Promise<ScheduleData
   const [assignmentsResult, eventsResult, seriesResult] = await Promise.all([
     client.from("assignments").select(ASSIGNMENT_FIELDS)
       .eq("semester", semester.id).eq("active", true).order("opens_at").returns<Assignment[]>(),
-    client.from("events").select("id,semester,title,category,description,start_at,end_at,link_url,version,schedule_series_id,occurrence_index")
+    client.from("events").select("id,semester,title,category,description,start_at,end_at,link_url,version,all_day,schedule_series_id,occurrence_index")
       .eq("semester", semester.id).order("start_at").returns<ScheduleEvent[]>(),
-    client.from("schedule_series").select("id,semester,kind,title,description,event_category,project_pattern,link_url,first_start_at,first_end_at,recurrence_frequency,recurrence_interval,weekdays,end_mode,occurrence_count,until_at,active,version")
+    client.from("schedule_series").select("id,semester,kind,title,description,event_category,project_pattern,link_url,all_day,first_start_at,first_end_at,recurrence_frequency,recurrence_interval,weekdays,end_mode,occurrence_count,until_at,active,version")
       .eq("semester", semester.id).eq("active", true).order("first_start_at").returns<ScheduleSeries[]>(),
   ]);
   const assignments = requireQueryData(assignmentsResult, "프로젝트 마감");
