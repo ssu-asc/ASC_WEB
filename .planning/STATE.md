@@ -4,7 +4,7 @@
 
 **ASC 2026-2 Core Operations Portal v1.0 is shipped and production-ready as of 2026-09-17. GSD Core Phases 1–10 are implemented, integrated, deployed, and re-verified.**
 
-The deployed Member operations portal includes Markdown upload submission: members select one `.md` report, staff inspect the exact stored source, and approval generates trusted individual/team ProjectDB reports. Resource hub, global staff memo, and Vault-backed shared staff credentials remain intact.
+The deployed Member operations portal includes integrated Markdown report submission: members write directly in a ProjectDB-template editor, may optionally import/download `.md`, staff inspect the exact stored source, and approval generates trusted individual/team ProjectDB reports. Resource hub, global staff memo, and Vault-backed shared staff credentials remain intact.
 
 ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration `202609160011` plus updated `submission-write` and `submission-admin` are deployed. ASC_WEB itself landed through PR #1 and production is served from the existing Cloudflare Pages project `asc-web` at `https://ssu-asc.com`; the GitHub Pages custom-domain association is intentionally unset. A least-privilege `PROJECTDB_TOKEN` is provisioned in hosted Supabase. The first real staff approval remains an operational production smoke for GitHub write permission; it is not a remaining implementation dependency. Notion synchronization is not part of the v1.0 release-completion gate.
 
@@ -47,7 +47,10 @@ ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration 
 - round-first `회차별 현황` remains the detailed review surface
 - individual rows per expected member; team rows per team
 - team-unassigned members surfaced separately
-- member submission is now one required Markdown upload + optional summary/code-repository URL, with no member-managed ProjectDB path/ref
+- member submission is an integrated Markdown editor prefilled from the ProjectDB progress-report template, with optional `.md` import/download and optional summary/code-repository URL
+- team templates prefill the fixed team name/member rows; individual templates remove team-only contribution friction
+- legacy ProjectDB Markdown imports have user-controlled YAML frontmatter stripped before validation; approval still regenerates trusted frontmatter server-side
+- members never manage ProjectDB path/ref/branch/commit or need to create a GitHub report file manually
 - Markdown drafts are stored as Postgres text (max 256 KiB) rather than object storage
 - staff review shows the exact escaped Markdown filename/byte size/source before approval
 - approval generates trusted frontmatter and deterministic `report-01.md` ProjectDB paths for both individual and team assignments

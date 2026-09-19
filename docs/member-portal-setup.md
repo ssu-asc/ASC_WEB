@@ -169,16 +169,19 @@ Google Sheets API/OAuth 직접 연동은 하지 않는다. 대신 Sheet/Excel �
 
 실제 승인 보고서는 기존 `ssu-asc/ProjectDB` Markdown/Git history가 원본이다. 개인/팀 보고서 모두 같은 ProjectDB를 사용하며 별도 보고서 저장소를 만들지 않는다.
 
-회원 제출 화면은 ProjectDB 경로·branch·tag·commit을 받지 않는다.
+회원 제출 화면은 ProjectDB 경로·branch·tag·commit을 받지 않는다. GitHub에서 직접 파일을 만들 필요도 없다. 새 제출 화면을 열면 ProjectDB의 격주 진행 보고서 구조를 기준으로 한 **인라인 Markdown 템플릿**이 자동으로 채워진다.
 
 ```text
 프로젝트명 — assignment에서 자동
-설명 — 선택
-report.md — 필수, UTF-8, 최대 256 KiB
-코드 GitHub 저장소 — 선택
+보고서 본문 — 사이트 안에서 바로 작성, ProjectDB 템플릿 자동 적용
+템플릿 다운로드 — 선택, 외부 에디터를 쓰고 싶을 때만 사용
+기존 .md 불러오기 — 선택, 이미 작성한 파일이 있을 때만 사용
+간단한 설명 / 코드 GitHub 저장소 — 추가 정보, 선택
 ```
 
-업로드된 Markdown은 승인 전까지 `submissions.report_markdown` text로 저장한다. Supabase Storage는 사용하지 않는다. YAML frontmatter는 회원이 넣지 않고, 승인 시 ASC_WEB이 실제 회원/팀/회차 정보를 이용해 자동 생성한다.
+팀 프로젝트 템플릿은 ProjectDB `templates/report-template.md`의 `팀 전체 진행 현황 / 개인별 기여 내역 / 이슈 및 해결 방안 / 다음 회차 목표 / 참고 자료` 흐름을 사용하고, 확정 팀명·팀원·활동 기간을 ASC_WEB이 미리 채운다. 개인 프로젝트는 같은 보고 흐름을 개인용으로 단순화해 불필요한 팀 기여도 입력을 요구하지 않는다.
+
+작성 중인 본문은 제출 시 `submissions.report_markdown` text로 저장한다. Supabase Storage는 사용하지 않는다. 외부에서 기존 ProjectDB Markdown을 불러와 YAML frontmatter가 포함되어 있더라도, member-controlled metadata를 신뢰하지 않도록 ASC_WEB이 frontmatter를 제거하고 본문만 사용한다. 승인 시에는 실제 회원/팀/회차 정보를 이용해 신뢰 가능한 frontmatter를 서버에서 다시 생성한다. 최대 본문 크기는 UTF-8 256 KiB다.
 
 승인 후 ProjectDB 경로:
 
