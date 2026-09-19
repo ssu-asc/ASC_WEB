@@ -63,6 +63,11 @@ ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration 
 ### Member Dashboard / Schedule / UI
 - member dashboard groups `지금 할 프로젝트 / 다음 프로젝트 / 지난 프로젝트`
 - staff `/member` redirects to operations
+- public recruitment popup is default-off and managed from staff settings with title/description/CTA plus optional exposure window
+- schedule creation now separates ordinary calendar events from project-submission schedules
+- recurrence rules support none/daily/weekly/monthly, arbitrary interval, multi-weekday weekly selection, and count/until/never endings
+- `never` rules stay durable in `schedule_series` and materialize a rolling ~180-day horizon on authenticated schedule reads
+- recurring project schedules can be individual, team, or alternating; every occurrence becomes a normal independent assignment/submission window
 - list/detail retain full project `opens_at → due_at` range
 - month calendar places projects only on `due_at` and labels them `마감`
 - dark native controls for select/option/datetime/search/disabled states
@@ -134,11 +139,11 @@ The new secret function was deployed using the Supabase server-side `--use-api` 
 
 Latest local evidence for Phase 10:
 
-- `npm test` — **87 passing, 0 failures**, including ProjectDB template generation/import coverage
+- `npm test` — **92 passing, 0 failures**, including ProjectDB template generation/import and calendar recurrence coverage
 - `npm run typecheck` — PASS
 - `npm run build` — PASS, Next 15.5.25 static export, **21 pages**
 - `npm run test:browser` — **15/15 PASS**
-- `npm run test:integration` — PASS with disposable local Supabase, migrations `001–011`, Auth/PostgREST/RLS/Edge Functions, Markdown individual/team submission and real local Vault operations
+- `npm run test:integration` — PASS with disposable local Supabase, migrations `001–012`, Auth/PostgREST/RLS/Edge Functions, public recruitment settings, recurring schedule materialization, Markdown individual/team submission and real local Vault operations
 - ProjectDB compatibility branch/main: `python3 -m unittest discover -s tests -v` — **23 passing**
 - `git diff --check` — PASS for ASC_WEB gate
 - hosted Supabase migration 011 — DEPLOYED; post-deploy dry-run reports up to date

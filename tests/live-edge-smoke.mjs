@@ -22,11 +22,12 @@ function readPublicEnv() {
 }
 
 const { url, publishable } = readPublicEnv();
-const functions = ['team-admin', 'operations-settings', 'staff-secrets'];
+const functions = ['team-admin', 'operations-settings', 'staff-secrets', 'schedule-series'];
 const smokeBodies = {
   'team-admin': { action: 'create_team', name: 'network-smoke-only' },
   'operations-settings': { action: 'create_link', title: 'network-smoke-only', description: '', url: 'https://example.com', service: 'other', category: 'other', audience: 'staff' },
   'staff-secrets': { action: 'list' },
+  'schedule-series': { action: 'materialize' },
 };
 const origins = [
   'http://localhost:3000',

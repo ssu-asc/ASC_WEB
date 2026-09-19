@@ -203,6 +203,25 @@ try {
   assert.equal(memberResourceAfterDeactivate.error, null, memberResourceAfterDeactivate.error?.message);
   assert.deepEqual(memberResourceAfterDeactivate.data.map((row) => row.title), ['ProjectDB'], 'inactive member resource is hidden by RLS');
 
+  stage = 'public recruitment settings';
+  const publicClient = createClient(url, publishable, { auth: { persistSession: false, autoRefreshToken: false } });
+  const publicRecruitment = await publicClient.from('public_recruitment_settings').select('enabled,title,version').eq('id', true).single();
+  assert.equal(publicRecruitment.error, null, publicRecruitment.error?.message);
+  assert.equal(publicRecruitment.data.enabled, false, 'recruitment popup defaults off');
+  const memberRecruitmentWrite = await clients.a.from('public_recruitment_settings').update({ enabled: true }).eq('id', true);
+  assert.notEqual(memberRecruitmentWrite.error, null, 'browser roles cannot mutate public recruitment settings');
+  const memberRecruitmentAdmin = await invokeFunction(clients.a, 'operations-settings', {
+    action: 'save_recruitment_settings', expected_version: publicRecruitment.data.version,
+    enabled: true, title: '금지', description: '', button_label: '지원', button_href: '/apply', starts_at: null, ends_at: null,
+  });
+  assert.equal(memberRecruitmentAdmin.response.status, 403, 'ordinary member cannot change recruitment settings');
+  const savedRecruitment = await invokeFunction(clients.staff, 'operations-settings', {
+    action: 'save_recruitment_settings', expected_version: publicRecruitment.data.version,
+    enabled: true, title: 'ASC 리크루팅 안내', description: '통합 테스트 모집', button_label: '지원하기', button_href: '/apply', starts_at: null, ends_at: null,
+  });
+  assert.equal(savedRecruitment.response.status, 200, JSON.stringify(savedRecruitment.payload));
+  assert.equal(savedRecruitment.payload.recruitment.enabled, true);
+
   stage = 'staff shared secrets';
   const memberMemoRead = await clients.a.from('staff_private_settings').select('staff_memo,version');
   assert.equal(memberMemoRead.error, null); assert.equal(memberMemoRead.data.length, 0, 'ordinary member cannot read staff memo');
@@ -451,6 +470,26 @@ try {
     opens_at: fixtureOpensAt, due_at: fixtureDueAt,
   });
   assert.equal(staleRoundUpdate.response.status, 409, 'stale project-round edit must conflict');
+
+  stage = 'recurring schedule series';
+  const seriesDenied = await invokeFunction(clients.a, 'schedule-series', {
+    action: 'create', kind: 'project', title: '금지 반복', description: '', event_category: null, project_pattern: 'individual', link_url: null,
+    first_start_at: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(), first_end_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+    recurrence_frequency: 'weekly', recurrence_interval: 1, weekdays: [1], end_mode: 'count', occurrence_count: 2, until_at: null,
+  });
+  assert.equal(seriesDenied.response.status, 403, 'ordinary member cannot create recurring schedules');
+  const recurringProject = await invokeFunction(clients.staff, 'schedule-series', {
+    action: 'create', kind: 'project', title: '통합 반복 프로젝트', description: '', event_category: null, project_pattern: 'alternating', link_url: null,
+    first_start_at: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(), first_end_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+    recurrence_frequency: 'daily', recurrence_interval: 2, weekdays: [], end_mode: 'count', occurrence_count: 3, until_at: null,
+  });
+  assert.equal(recurringProject.response.status, 200, JSON.stringify(recurringProject.payload));
+  const recurringAssignments = await admin.from('assignments').select('project_type,schedule_series_id,occurrence_index').eq('schedule_series_id', recurringProject.payload.series.id).order('occurrence_index');
+  assert.equal(recurringAssignments.error, null, recurringAssignments.error?.message);
+  assert.equal(recurringAssignments.data.length, 3);
+  assert.deepEqual(recurringAssignments.data.map((row) => row.project_type), ['individual', 'team', 'individual']);
+  const materializeByMember = await invokeFunction(clients.a, 'schedule-series', { action: 'materialize' });
+  assert.equal(materializeByMember.response.status, 200, JSON.stringify(materializeByMember.payload));
 
   stage = 'submission-write individual markdown';
   const reportV1 = '# 통합 테스트 보고서\n\n첫 번째 본문';

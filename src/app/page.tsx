@@ -27,6 +27,8 @@ import { useRouter } from "next/navigation";
 import RecruitPopup from "@/component/RecruitPopup";
 import DefaultTeamActivity from "@/component/DefaultTeamActivity";
 import { withBasePath } from "@/lib/base-path";
+import { readPublicRecruitmentSettings, type PublicRecruitmentSettings } from "@/lib/member-api";
+import { getMemberClient } from "@/lib/supabase";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -35,7 +37,7 @@ export default function Home() {
   const [awardList, setAwardList] = useState({} as any);
   const [activityList, setActivityList] = useState({} as any);
   const [curriculumList, setCurriculumList] = useState({} as any);
-  const [applyData, setApplyData] = useState({} as any);
+  const [recruitmentSettings, setRecruitmentSettings] = useState<PublicRecruitmentSettings | null>(null);
   const [projectData, setProjectData] = useState({} as any);
   const [showPopup, setShowPopup] = useState(false);
   const [showAllAwards, setShowAllAwards] = useState(false);
@@ -81,13 +83,19 @@ export default function Home() {
       setCurriculumList(await result.json())
     })
 
-    fetch(withBasePath("/data/apply.json")).then(async (result) => {
-        const data = await result.json();
-        setApplyData(data);
-        if (data.isOpen) {
-            setShowPopup(true);
-        }
-    })
+    const publicClient = getMemberClient();
+    if (publicClient) {
+      void readPublicRecruitmentSettings(publicClient).then((settings) => {
+        setRecruitmentSettings(settings);
+        if (!settings?.enabled) return;
+        const now = Date.now();
+        const startsAt = settings.starts_at ? new Date(settings.starts_at).valueOf() : Number.NEGATIVE_INFINITY;
+        const endsAt = settings.ends_at ? new Date(settings.ends_at).valueOf() : Number.POSITIVE_INFINITY;
+        if (now >= startsAt && now <= endsAt) setShowPopup(true);
+      }).catch(() => {
+        // Public recruitment settings are optional. A read failure must never block the homepage.
+      });
+    }
 
     fetch(withBasePath("/data/projects.json")).then(async (result) => {
       const data = await result.json();
@@ -109,7 +117,7 @@ export default function Home() {
 
   return (
     <div className={styles.page}>
-        <RecruitPopup visible={showPopup} onClose={() => { setShowPopup(false) }} applyData={applyData} />
+        <RecruitPopup visible={showPopup} onClose={() => { setShowPopup(false) }} settings={recruitmentSettings} />
       <main className={styles.main}>
 
         <div className={styles.wrap} style={{ height: "100vh" }}>
