@@ -406,6 +406,68 @@ function ScheduleView({ profile }: { profile: Profile }) {
     }
   };
 
+  const deleteBulkRows = async (deleteAll = false) => {
+    if (!client || view.status !== "ready") return;
+    const keys = deleteAll ? items.map((item) => item.id) : bulkSelected;
+    const seriesIds = new Set<string>();
+    if (deleteAll) {
+      for (const series of view.data.series) seriesIds.add(series.id);
+    }
+    for (const key of keys) {
+      const row = bulkRows[key] ?? { item: items.find((item) => item.id === key) };
+      if (row?.item?.schedule_series_id) seriesIds.add(row.item.schedule_series_id);
+    }
+    if (keys.length === 0 && seriesIds.size === 0) return;
+
+    const recurringNote = seriesIds.size > 0
+      ? `\n\n반복 생성 일정 ${seriesIds.size}개 규칙도 함께 종료되어 이후 회차가 다시 생성되지 않습니다.`
+      : "";
+    const targetLabel = deleteAll ? `전체 일정 ${keys.length}개` : `선택한 일정 ${keys.length}개`;
+    if (!window.confirm(`${targetLabel}을 삭제할까요?${recurringNote}\n\n제출 기록이 있는 프로젝트 회차는 보호되어 삭제되지 않습니다.`)) return;
+    if (deleteAll && !window.confirm("전체 삭제는 되돌릴 수 없습니다. 정말 계속할까요?")) return;
+
+    setBusy(true); setMessage(null);
+    let deleted = 0;
+    const failures: string[] = [];
+    try {
+      for (const key of keys) {
+        const item = bulkRows[key]?.item ?? items.find((candidate) => candidate.id === key);
+        if (!item) continue;
+        try {
+          if (item.source === "event") {
+            const event = view.data.events.find((candidate) => candidate.id === item.id);
+            if (!event) throw new Error("일정 원본을 찾을 수 없습니다.");
+            await deleteEvent(client, profile, event);
+          } else {
+            const assignment = view.data.assignments.find((candidate) => `assignment:${candidate.id}` === item.id);
+            if (!assignment) throw new Error("프로젝트 회차 원본을 찾을 수 없습니다.");
+            await deactivateAssignment(client, assignment);
+          }
+          deleted += 1;
+        } catch (error) {
+          failures.push(`${item.title}: ${error instanceof Error ? error.message : "삭제 실패"}`);
+        }
+      }
+
+      for (const seriesId of seriesIds) {
+        const series = view.data.series.find((candidate) => candidate.id === seriesId);
+        if (!series) continue;
+        try {
+          await deactivateScheduleSeries(client, series);
+        } catch (error) {
+          failures.push(`${series.title} 반복 규칙: ${error instanceof Error ? error.message : "종료 실패"}`);
+        }
+      }
+
+      closeBulkEdit();
+      const failureText = failures.length > 0 ? ` · ${failures.length}개 실패 — ${failures.slice(0, 3).join(" / ")}` : "";
+      setMessage(`${deleted}개 일정을 삭제했습니다${failureText}`);
+      reload((value) => value + 1);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return <main className={styles.page}>
     <MemberToolbar profile={profile} />
     <p className={styles.eyebrow}>ASC SCHEDULE</p>
@@ -457,6 +519,8 @@ function ScheduleView({ profile }: { profile: Profile }) {
             </label>
             <button className={styles.smallButton} type="button" disabled={bulkSelected.length === 0 || bulkShiftDays === 0} onClick={shiftSelectedBulkRows}>이동 적용</button>
             <button className={styles.button} type="button" disabled={busy || bulkSelected.length === 0} onClick={() => void saveBulkRows()}>{busy ? "저장 중…" : "선택 일정 저장"}</button>
+            <button className={styles.dangerButton} type="button" disabled={busy || bulkSelected.length === 0} onClick={() => void deleteBulkRows(false)}>선택 삭제</button>
+            <button className={styles.dangerButton} type="button" disabled={busy || items.length === 0 && view.data.series.length === 0} onClick={() => void deleteBulkRows(true)}>전체 삭제</button>
           </div>
           <div className={styles.bulkScheduleWrap}><table className={styles.bulkScheduleTable}>
             <thead><tr><th>선택</th><th>종류</th><th>제목</th><th>시작</th><th>종료 / 마감</th><th>비고</th></tr></thead>

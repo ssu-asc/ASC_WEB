@@ -342,14 +342,19 @@ test('project rounds are administered through a staff edge function and recurrin
 
 test('staff schedule supports bulk editing multiple existing occurrences', () => {
   const page = read('src/app/member/schedule/page.tsx');
-  for (const label of ['일괄 수정', '전체 선택', '선택 일정 날짜 이동', '이동 적용', '선택 일정 저장']) assert.match(page, new RegExp(label));
+  for (const label of ['일괄 수정', '전체 선택', '선택 일정 날짜 이동', '이동 적용', '선택 일정 저장', '선택 삭제', '전체 삭제']) assert.match(page, new RegExp(label));
   assert.match(page, /bulkSelected/);
   assert.match(page, /saveBulkRows/);
   assert.match(page, /shiftSelectedBulkRows/);
+  assert.match(page, /deleteBulkRows/);
   assert.match(page, /saveEvent/);
   assert.match(page, /saveAssignment/);
+  assert.match(page, /deleteEvent/);
+  assert.match(page, /deactivateAssignment/);
+  assert.match(page, /deactivateScheduleSeries/);
   assert.match(page, /반복 생성 회차/);
   assert.match(page, /반복 규칙 자체는 바뀌지 않습니다/);
+  assert.match(page, /제출 기록이 있는 프로젝트 회차는 보호되어 삭제되지 않습니다/);
 });
 
 test('public recruitment popup is disabled by default and staff-configurable', () => {
