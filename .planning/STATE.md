@@ -155,8 +155,8 @@ Latest local evidence for Phase 10:
 - hosted `operations-settings` v8 / `schedule-series` v1 — ACTIVE
 - hosted Edge smoke — PASS for `team-admin`, `operations-settings`, `staff-secrets`, and `schedule-series`
 - hosted public recruitment singleton — verified `enabled=false` after migration 012; the homepage popup is off until staff explicitly enables it
-- Cloudflare Pages production deployment `15ea21de-2271-4785-8188-329c06a2f88b` — project `asc-web`, branch `main`, source `7e209c1`, configurable recruitment + recurring calendar deployment PASS
-- production domain smoke — `https://ssu-asc.com/`, `/member/schedule/`, and `/member/operations/settings/` return 200; production bundles contain the recruitment settings UI and daily/weekly/monthly/count/until/never recurring-schedule controls
+- Cloudflare Pages production deployment `8eedc252-c178-4a31-b61c-3069f983bc57` — project `asc-web`, branch `main`, source `f7d6baa`, schedule bulk-edit deployment PASS
+- production domain smoke — `https://ssu-asc.com/`, `/member/schedule/`, and `/member/operations/settings/` return 200; production schedule bundle contains recurrence controls plus `일괄 수정 / 전체 선택 / 날짜 이동 / 선택 일정 저장` and recurring-occurrence markers
 - public homepage performance — First Load JS remains **163 kB** by reading the public recruitment singleton through a lightweight REST request rather than loading the full Supabase client
 
 Integration coverage includes:
