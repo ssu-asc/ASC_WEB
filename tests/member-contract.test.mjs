@@ -340,6 +340,18 @@ test('project rounds are administered through a staff edge function and recurrin
   assert.match(page, /generateScheduleOccurrences/);
 });
 
+test('staff schedule supports bulk editing multiple existing occurrences', () => {
+  const page = read('src/app/member/schedule/page.tsx');
+  for (const label of ['일괄 수정', '전체 선택', '선택 일정 날짜 이동', '이동 적용', '선택 일정 저장']) assert.match(page, new RegExp(label));
+  assert.match(page, /bulkSelected/);
+  assert.match(page, /saveBulkRows/);
+  assert.match(page, /shiftSelectedBulkRows/);
+  assert.match(page, /saveEvent/);
+  assert.match(page, /saveAssignment/);
+  assert.match(page, /반복 생성 회차/);
+  assert.match(page, /반복 규칙 자체는 바뀌지 않습니다/);
+});
+
 test('public recruitment popup is disabled by default and staff-configurable', () => {
   const migration = read('supabase/migrations/202609190012_public_recruitment_recurring_schedule.sql');
   assert.match(migration, /public_recruitment_settings/);

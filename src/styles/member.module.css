@@ -173,6 +173,20 @@
 .upcomingList strong, .scheduleList strong { display: block; margin-top: 5px; }
 .upcomingList p, .scheduleList p { margin-top: 5px; color: rgba(255,255,255,.55); font-size: 13px; line-height: 1.5; }
 .scheduleCategory { display: inline-flex; flex: 0 0 auto; padding: 4px 8px; border: 1px solid rgba(255,255,255,.2); border-radius: 4px; color: rgba(255,255,255,.7); font-size: 11px; }
+.bulkScheduleToolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 20px; padding: 14px; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(255,255,255,.025); }
+.bulkScheduleToolbar > span { color: rgba(255,255,255,.6); font-size: 12px; }
+.bulkScheduleToolbar label { display: inline-flex; align-items: center; gap: 8px; color: rgba(255,255,255,.65); font-size: 12px; }
+.bulkScheduleToolbar input { width: 72px; min-height: 38px; padding: 7px 9px; border: 1px solid rgba(255,255,255,.2); border-radius: 5px; background: #171819; color: white; font: inherit; }
+.bulkScheduleToolbar .button { margin-left: auto; }
+.bulkScheduleWrap { width: 100%; overflow-x: auto; margin-top: 16px; }
+.bulkScheduleTable { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 12px; }
+.bulkScheduleTable th { padding: 10px 8px; text-align: left; color: rgba(255,255,255,.5); font-weight: 400; border-bottom: 1px solid var(--award-border); }
+.bulkScheduleTable td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.08); vertical-align: middle; }
+.bulkScheduleTable tr[data-selected="true"] { background: rgba(75,119,216,.06); }
+.bulkScheduleTable input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--main-color); }
+.bulkScheduleInput { width: 100%; min-width: 150px; min-height: 38px; padding: 8px 9px; border: 1px solid rgba(255,255,255,.18); border-radius: 5px; background: #171819; color: white; font: inherit; }
+.bulkScheduleInput:disabled { opacity: .48; background: #101112; }
+.bulkScheduleInput:focus-visible, .bulkScheduleToolbar input:focus-visible { outline: 2px solid var(--main-color); outline-offset: 2px; }
 .calendarHeader { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .weekHeader, .calendarGrid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); }
 .weekHeader { margin-top: 20px; color: rgba(255,255,255,.45); font-size: 12px; text-align: center; }
@@ -247,6 +261,10 @@
   .markdownEditor { min-height: 480px; padding: 14px; font-size: 12px; }
   .reportMeta { flex-direction: column; gap: 4px; }
   .upcomingList article, .scheduleList article { align-items: flex-start; flex-direction: column; }
+  .bulkScheduleToolbar { align-items: stretch; }
+  .bulkScheduleToolbar > *, .bulkScheduleToolbar .button { margin-left: 0; }
+  .bulkScheduleToolbar label { flex-wrap: wrap; }
+  .bulkScheduleWrap { margin-left: -4px; margin-right: -4px; width: calc(100% + 8px); }
   .calendarCard { padding-left: 10px; padding-right: 10px; }
   .calendarHeader h2 { font-size: 18px; }
   .calendarDay { min-height: 72px; padding: 4px; }

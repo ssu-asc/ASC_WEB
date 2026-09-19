@@ -41,6 +41,14 @@ type Editing =
   | { kind: "series"; series: ScheduleSeries }
   | null;
 
+type BulkEditRow = {
+  key: string;
+  item: ScheduleItem;
+  title: string;
+  start: string;
+  end: string;
+};
+
 const categoryLabels: Record<EventCategory, string> = {
   project: "프로젝트 제출", seminar: "세미나", ctf: "CTF", meeting: "회의", presentation: "발표", other: "기타",
 };
@@ -103,6 +111,13 @@ function recurrenceSummary(series: ScheduleSeries): string {
   return `${interval}${weekdays} · ${end}`;
 }
 
+function shiftLocalInput(value: string, days: number): string {
+  if (!value || !Number.isFinite(days) || days === 0) return value;
+  const time = new Date(`${value}:00+09:00`).valueOf();
+  if (!Number.isFinite(time)) return value;
+  return localInput(new Date(time + days * 24 * 60 * 60 * 1000).toISOString());
+}
+
 function ScheduleView({ profile }: { profile: Profile }) {
   const { client } = useMemberSession();
   const [view, setView] = useState<View>({ status: "loading" });
@@ -124,6 +139,10 @@ function ScheduleView({ profile }: { profile: Profile }) {
   const [endMode, setEndMode] = useState<ScheduleRecurrenceEndMode>("count");
   const [occurrenceCount, setOccurrenceCount] = useState(8);
   const [until, setUntil] = useState("");
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkRows, setBulkRows] = useState<Record<string, BulkEditRow>>({});
+  const [bulkSelected, setBulkSelected] = useState<string[]>([]);
+  const [bulkShiftDays, setBulkShiftDays] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const staff = isActiveStaff(profile);
@@ -287,6 +306,106 @@ function ScheduleView({ profile }: { profile: Profile }) {
     }
   };
 
+  const openBulkEdit = () => {
+    const rows = Object.fromEntries(items.map((item) => [item.id, {
+      key: item.id,
+      item,
+      title: item.title,
+      start: localInput(item.start_at),
+      end: localInput(item.end_at),
+    } satisfies BulkEditRow]));
+    setBulkRows(rows);
+    setBulkSelected([]);
+    setBulkShiftDays(0);
+    setBulkMode(true);
+    setMessage(null);
+  };
+
+  const closeBulkEdit = () => {
+    setBulkMode(false);
+    setBulkRows({});
+    setBulkSelected([]);
+    setBulkShiftDays(0);
+  };
+
+  const toggleBulkItem = (key: string) => {
+    setBulkSelected((current) => current.includes(key) ? current.filter((value) => value !== key) : [...current, key]);
+  };
+
+  const toggleAllBulkItems = () => {
+    setBulkSelected((current) => current.length === items.length ? [] : items.map((item) => item.id));
+  };
+
+  const updateBulkRow = (key: string, field: "title" | "start" | "end", value: string) => {
+    setBulkRows((current) => ({ ...current, [key]: { ...current[key], [field]: value } }));
+  };
+
+  const shiftSelectedBulkRows = () => {
+    if (!Number.isFinite(bulkShiftDays) || bulkShiftDays === 0 || bulkSelected.length === 0) return;
+    const selected = new Set(bulkSelected);
+    setBulkRows((current) => Object.fromEntries(Object.entries(current).map(([key, row]) => [key, selected.has(key) ? {
+      ...row,
+      start: shiftLocalInput(row.start, bulkShiftDays),
+      end: shiftLocalInput(row.end, bulkShiftDays),
+    } : row])));
+  };
+
+  const saveBulkRows = async () => {
+    if (!client || view.status !== "ready" || !view.data.semester || bulkSelected.length === 0) return;
+    setBusy(true); setMessage(null);
+    let saved = 0;
+    const failures: string[] = [];
+    try {
+      for (const key of bulkSelected) {
+        const row = bulkRows[key];
+        if (!row) continue;
+        try {
+          if (!row.title.trim()) throw new Error("제목이 비어 있습니다.");
+          if (row.item.source === "event") {
+            const event = view.data.events.find((candidate) => candidate.id === row.item.id);
+            if (!event) throw new Error("일정 원본을 찾을 수 없습니다.");
+            const draft: EventDraft = {
+              title: row.title.trim(),
+              category: event.category,
+              description: event.description,
+              start_at: inputToIso(row.start),
+              end_at: row.end ? inputToIso(row.end) : null,
+              link_url: event.link_url,
+            };
+            const validation = validateEventDraft(draft);
+            if (!validation.ok) throw new Error(validation.message);
+            await saveEvent(client, profile, view.data.semester.id, draft, event);
+          } else {
+            const assignment = view.data.assignments.find((candidate) => `assignment:${candidate.id}` === row.item.id);
+            if (!assignment) throw new Error("프로젝트 회차 원본을 찾을 수 없습니다.");
+            const opensAt = inputToIso(row.start);
+            const dueAt = inputToIso(row.end);
+            if (new Date(dueAt).valueOf() <= new Date(opensAt).valueOf()) throw new Error("마감은 제출 시작 이후여야 합니다.");
+            await saveAssignment(client, {
+              project_type: assignment.project_type,
+              title: row.title.trim(),
+              description: assignment.description,
+              opens_at: opensAt,
+              due_at: dueAt,
+            }, assignment);
+          }
+          saved += 1;
+        } catch (error) {
+          failures.push(`${row.title}: ${error instanceof Error ? error.message : "저장 실패"}`);
+        }
+      }
+      if (failures.length === 0) {
+        closeBulkEdit();
+        setMessage(`${saved}개 일정을 일괄 수정했습니다.`);
+      } else {
+        setMessage(`${saved}개 저장 · ${failures.length}개 실패 — ${failures.slice(0, 3).join(" / ")}`);
+      }
+      reload((value) => value + 1);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return <main className={styles.page}>
     <MemberToolbar profile={profile} />
     <p className={styles.eyebrow}>ASC SCHEDULE</p>
@@ -322,10 +441,44 @@ function ScheduleView({ profile }: { profile: Profile }) {
         </article>)}</div>
       </section>}
 
-      <section className={styles.scheduleSection}><h2>전체 일정</h2><div className={styles.scheduleList}>{items.map((item) => <article key={item.id}>
-        <div><span className={styles.scheduleCategory}>{itemLabel(item)}</span><strong>{item.title}</strong><p>{displayDate(item.start_at)}{item.end_at ? ` → ${displayDate(item.end_at)}` : ""}</p>{item.description && <p>{item.description}</p>}</div>
-        <div className={styles.actions}>{item.link_url && <a className={styles.textLink} href={item.link_url} target="_blank" rel="noopener noreferrer">링크 ↗</a>}{staff && <button className={styles.smallButton} onClick={() => editItem(item)}>{item.schedule_series_id ? "반복 규칙 수정" : "수정"}</button>}</div>
-      </article>)}</div>{items.length === 0 && <p className={styles.notice}>등록된 일정이 없습니다.</p>}</section>
+      <section className={styles.scheduleSection}>
+        <div className={styles.headingRow}>
+          <div><h2>전체 일정</h2>{bulkMode && <p className={styles.helper}>체크한 일정을 표에서 직접 수정하고 한 번에 저장합니다. 반복 일정에서 생성된 한 회차를 수정해도 반복 규칙 자체는 바뀌지 않습니다.</p>}</div>
+          {staff && items.length > 0 && <button className={styles.smallButton} onClick={bulkMode ? closeBulkEdit : openBulkEdit}>{bulkMode ? "일괄 수정 닫기" : "일괄 수정"}</button>}
+        </div>
+
+        {bulkMode ? <>
+          <div className={styles.bulkScheduleToolbar}>
+            <button className={styles.smallButton} type="button" onClick={toggleAllBulkItems}>{bulkSelected.length === items.length ? "전체 선택 해제" : "전체 선택"}</button>
+            <span>{bulkSelected.length}개 선택</span>
+            <label>선택 일정 날짜 이동
+              <input type="number" value={bulkShiftDays} onChange={(event) => setBulkShiftDays(Number(event.target.value))} />
+              <span>일</span>
+            </label>
+            <button className={styles.smallButton} type="button" disabled={bulkSelected.length === 0 || bulkShiftDays === 0} onClick={shiftSelectedBulkRows}>이동 적용</button>
+            <button className={styles.button} type="button" disabled={busy || bulkSelected.length === 0} onClick={() => void saveBulkRows()}>{busy ? "저장 중…" : "선택 일정 저장"}</button>
+          </div>
+          <div className={styles.bulkScheduleWrap}><table className={styles.bulkScheduleTable}>
+            <thead><tr><th>선택</th><th>종류</th><th>제목</th><th>시작</th><th>종료 / 마감</th><th>비고</th></tr></thead>
+            <tbody>{items.map((item) => {
+              const row = bulkRows[item.id];
+              const selected = bulkSelected.includes(item.id);
+              return <tr key={item.id} data-selected={selected}>
+                <td><input type="checkbox" aria-label={`${item.title} 선택`} checked={selected} onChange={() => toggleBulkItem(item.id)} /></td>
+                <td><span className={styles.scheduleCategory}>{itemLabel(item)}</span></td>
+                <td><input className={styles.bulkScheduleInput} disabled={!selected} value={row?.title ?? item.title} onChange={(event) => updateBulkRow(item.id, "title", event.target.value)} /></td>
+                <td><input className={styles.bulkScheduleInput} type="datetime-local" disabled={!selected} value={row?.start ?? localInput(item.start_at)} onChange={(event) => updateBulkRow(item.id, "start", event.target.value)} /></td>
+                <td><input className={styles.bulkScheduleInput} type="datetime-local" disabled={!selected} value={row?.end ?? localInput(item.end_at)} onChange={(event) => updateBulkRow(item.id, "end", event.target.value)} /></td>
+                <td>{item.schedule_series_id ? <span className={styles.secondary}>반복 생성 회차</span> : <span className={styles.secondary}>개별 일정</span>}</td>
+              </tr>;
+            })}</tbody>
+          </table></div>
+        </> : <div className={styles.scheduleList}>{items.map((item) => <article key={item.id}>
+          <div><span className={styles.scheduleCategory}>{itemLabel(item)}</span><strong>{item.title}</strong><p>{displayDate(item.start_at)}{item.end_at ? ` → ${displayDate(item.end_at)}` : ""}</p>{item.description && <p>{item.description}</p>}</div>
+          <div className={styles.actions}>{item.link_url && <a className={styles.textLink} href={item.link_url} target="_blank" rel="noopener noreferrer">링크 ↗</a>}{staff && <button className={styles.smallButton} onClick={() => editItem(item)}>{item.schedule_series_id ? "반복 규칙 수정" : "수정"}</button>}</div>
+        </article>)}</div>}
+        {items.length === 0 && <p className={styles.notice}>등록된 일정이 없습니다.</p>}
+      </section>
     </>}
 
     {staff && showForm && <div className={styles.modalBackdrop} role="presentation"><section className={styles.modalCard} role="dialog" aria-modal="true" aria-labelledby="schedule-form-title">
