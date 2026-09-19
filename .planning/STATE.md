@@ -69,6 +69,8 @@ ProjectDB compatibility landed in `ssu-asc/ProjectDB` PR #80. ASC_WEB migration 
 - `never` rules stay durable in `schedule_series` and materialize a rolling ~180-day horizon on authenticated schedule reads
 - recurring project schedules can be individual, team, or alternating; every occurrence becomes a normal independent assignment/submission window
 - staff can bulk-select existing schedule occurrences, edit title/start/end-or-deadline inline, shift selected rows by ±N days, and save them together through the existing optimistic-version APIs
+- schedule bulk mode also supports `선택 삭제` and double-confirmed `전체 삭제`; ordinary events are deleted, project rounds use the existing protected deactivate path, and submissions prevent destructive project-round deletion
+- deleting recurring occurrences also deactivates their schedule series so materialization cannot silently recreate them
 - editing one occurrence materialized from a recurring rule does not mutate the rule itself; staff use `반복 규칙 수정` for series-wide future changes
 - list/detail retain full project `opens_at → due_at` range
 - month calendar places projects only on `due_at` and labels them `마감`
