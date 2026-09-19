@@ -27,8 +27,7 @@ import { useRouter } from "next/navigation";
 import RecruitPopup from "@/component/RecruitPopup";
 import DefaultTeamActivity from "@/component/DefaultTeamActivity";
 import { withBasePath } from "@/lib/base-path";
-import { readPublicRecruitmentSettings, type PublicRecruitmentSettings } from "@/lib/member-api";
-import { getMemberClient } from "@/lib/supabase";
+import { fetchPublicRecruitmentSettings, type PublicRecruitmentSettings } from "@/lib/public-recruitment";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -83,9 +82,7 @@ export default function Home() {
       setCurriculumList(await result.json())
     })
 
-    const publicClient = getMemberClient();
-    if (publicClient) {
-      void readPublicRecruitmentSettings(publicClient).then((settings) => {
+    void fetchPublicRecruitmentSettings().then((settings) => {
         setRecruitmentSettings(settings);
         if (!settings?.enabled) return;
         const now = Date.now();
@@ -95,7 +92,6 @@ export default function Home() {
       }).catch(() => {
         // Public recruitment settings are optional. A read failure must never block the homepage.
       });
-    }
 
     fetch(withBasePath("/data/projects.json")).then(async (result) => {
       const data = await result.json();

@@ -6,7 +6,7 @@ import DefaultBtn from "./DefaultBtn";
 import { useRouter } from "next/navigation";
 import { IoClose } from "react-icons/io5";
 import { TbInfoHexagonFilled } from "react-icons/tb";
-import type { PublicRecruitmentSettings } from "@/lib/member-api";
+import type { PublicRecruitmentSettings } from "@/lib/public-recruitment";
 
 interface RecruitPopupProps {
   visible: boolean;

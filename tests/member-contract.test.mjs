@@ -346,7 +346,7 @@ test('public recruitment popup is disabled by default and staff-configurable', (
   assert.match(migration, /values \(true, false\)/i);
   assert.match(migration, /grant select on public\.public_recruitment_settings to anon, authenticated/i);
   const home = read('src/app/page.tsx');
-  assert.match(home, /readPublicRecruitmentSettings/);
+  assert.match(home, /fetchPublicRecruitmentSettings/);
   assert.doesNotMatch(home, /data\.isOpen/);
   const settings = read('src/app/member/operations/settings/page.tsx');
   assert.match(settings, /공개 리크루팅 안내/);
