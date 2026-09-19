@@ -265,11 +265,18 @@ test('staff secret edge boundary reveals only on explicit no-store action', () =
   assert.match(api, /["']staff-secrets["']/);
 });
 
-test('member submission uses markdown file upload instead of ProjectDB path and ref inputs', () => {
+test('member submission uses an integrated ProjectDB template editor with optional markdown import', () => {
   const page = read('src/app/member/submission/page.tsx');
+  assert.match(page, /buildProjectReportTemplate/);
+  assert.match(page, /프로젝트 보고서 Markdown 편집기/);
+  assert.match(page, /ProjectDB 템플릿/);
+  assert.match(page, /템플릿 다시 적용/);
+  assert.match(page, /템플릿 다운로드/);
+  assert.match(page, /기존 \.md 불러오기/);
   assert.match(page, /type=["']file["']/);
   assert.match(page, /accept=["']\.md,text\/markdown,text\/plain["']/);
   assert.match(page, /\.text\(\)/);
+  assert.match(page, /stripProjectDbFrontmatter/);
   assert.match(page, /validateMarkdownUpload|validateSubmissionDraft/);
   assert.match(page, /report_filename/);
   assert.match(page, /report_markdown/);

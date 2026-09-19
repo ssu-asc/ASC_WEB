@@ -7,6 +7,7 @@ import { MemberGate, useMemberSession } from "@/component/member/MemberSession";
 import { MemberToolbar } from "@/component/member/MemberToolbar";
 import { readMemberDashboard, saveSubmission, type TeamContext } from "@/lib/member-api";
 import { formatDeadline, isLateSubmission, projectWindowState, STATE_LABELS, type DashboardItem, type Profile } from "@/lib/member-domain";
+import { buildProjectReportTemplate, stripProjectDbFrontmatter } from "@/lib/project-report-template";
 import { validateMarkdownUpload, validateSubmissionDraft, type SubmissionDraft } from "@/lib/submission-upload";
 import styles from "@/styles/member.module.css";
 
@@ -35,6 +36,7 @@ function SubmissionForm({ profile }: { profile: Profile }) {
   const assignmentId = params.get("assignment") ?? "";
   const [view, setView] = useState<View>({ status: "loading" });
   const [draft, setDraft] = useState<SubmissionDraft>(emptyDraft);
+  const [templateMarkdown, setTemplateMarkdown] = useState("");
   const [saving, setSaving] = useState(false);
   const [readingFile, setReadingFile] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -47,13 +49,25 @@ function SubmissionForm({ profile }: { profile: Profile }) {
       const item = dashboard.items.find((candidate) => candidate.assignment.id === assignmentId);
       if (!item) throw new Error("제출 항목을 찾을 수 없습니다.");
       const team = item.assignment.project_type === "team" ? dashboard.team : null;
+      const template = buildProjectReportTemplate({
+        projectName: item.assignment.title,
+        projectType: item.assignment.project_type,
+        opensAt: item.assignment.opens_at,
+        dueAt: item.assignment.due_at,
+        individual: { member_id: profile.member_id, name: profile.name },
+        team: team?.team ? {
+          name: team.team.name,
+          members: team.members.map((member) => ({ member_id: member.member_id, name: member.name })),
+        } : null,
+      });
+      setTemplateMarkdown(template);
       setView({ status: "ready", data: { item, team } });
       setDraft(item.submission ? {
         summary: item.submission.summary,
         code_repository_url: item.submission.code_repository_url ?? "",
-        report_filename: item.submission.report_filename ?? "",
-        report_markdown: item.submission.report_markdown ?? "",
-      } : emptyDraft);
+        report_filename: item.submission.report_filename ?? "report.md",
+        report_markdown: item.submission.report_markdown ?? template,
+      } : { ...emptyDraft, report_filename: "report.md", report_markdown: template });
     } catch (error) {
       setView({ status: "error", message: error instanceof Error ? error.message : "제출 정보를 불러오지 못했습니다." });
     }
@@ -69,6 +83,11 @@ function SubmissionForm({ profile }: { profile: Profile }) {
     : false;
   const locked = readonly || beforeOpen;
   const update = (key: "summary" | "code_repository_url", value: string) => setDraft((current) => ({ ...current, [key]: value }));
+  const updateReport = (value: string) => setDraft((current) => ({
+    ...current,
+    report_filename: current.report_filename || "report.md",
+    report_markdown: value,
+  }));
   const reportValidation = draft.report_filename && draft.report_markdown
     ? validateMarkdownUpload(draft.report_filename, draft.report_markdown)
     : null;
@@ -80,19 +99,44 @@ function SubmissionForm({ profile }: { profile: Profile }) {
     setReadingFile(true);
     setMessage(null);
     try {
-      const markdown = await file.text();
+      const source = await file.text();
+      const stripped = stripProjectDbFrontmatter(source);
+      const markdown = stripped.markdown;
       const validation = validateMarkdownUpload(file.name, markdown);
       if (!validation.ok) {
         setMessage(validation.message);
         return;
       }
       setDraft((current) => ({ ...current, report_filename: validation.filename, report_markdown: markdown }));
-      setMessage(`${validation.filename} 파일을 선택했습니다.`);
+      setMessage(stripped.stripped
+        ? `${validation.filename}을 불러왔습니다. ProjectDB frontmatter는 ASC_WEB이 다시 생성하므로 자동으로 제거했습니다.`
+        : `${validation.filename}을 불러왔습니다.`);
     } catch {
       setMessage("Markdown 파일을 읽지 못했습니다. UTF-8 텍스트 파일인지 확인해 주세요.");
     } finally {
       setReadingFile(false);
     }
+  };
+
+  const applyTemplate = () => {
+    if (locked || !templateMarkdown) return;
+    const hasMeaningfulDraft = draft.report_markdown.trim() && draft.report_markdown !== templateMarkdown;
+    if (hasMeaningfulDraft && !window.confirm("현재 작성 중인 보고서를 ProjectDB 템플릿으로 바꿀까요? 작성 내용은 사라집니다.")) return;
+    setDraft((current) => ({ ...current, report_filename: "report.md", report_markdown: templateMarkdown }));
+    setMessage("ProjectDB 진행 보고서 템플릿을 적용했습니다.");
+  };
+
+  const downloadTemplate = () => {
+    if (!templateMarkdown) return;
+    const blob = new Blob([templateMarkdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "report-template.md";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   const submit = async () => {
@@ -129,7 +173,7 @@ function SubmissionForm({ profile }: { profile: Profile }) {
     <MemberToolbar profile={profile} />
     <p className={styles.eyebrow}>ASC PROJECT SUBMISSION</p>
     <h1 className={styles.title}>{view.status === "ready" ? view.data.item.assignment.title : "프로젝트 제출"}</h1>
-    <p className={styles.description}>Markdown 보고서를 올리면 운영진 승인 후 ProjectDB에 자동 반영됩니다.</p>
+    <p className={styles.description}>GitHub에서 파일을 만들 필요 없이 여기서 ProjectDB 템플릿에 맞춰 작성하고 바로 제출할 수 있습니다.</p>
 
     {view.status === "loading" && <p className={styles.notice} role="status">제출 정보를 불러오고 있습니다.</p>}
     {view.status === "error" && <section className={styles.notice} role="alert"><p>{view.message}</p><Link className={styles.textLink} href="/member">돌아가기</Link></section>}
@@ -145,26 +189,55 @@ function SubmissionForm({ profile }: { profile: Profile }) {
       {beforeOpen && <p className={styles.notice}>제출 시작 전입니다. 시작 시간이 되면 제출할 수 있습니다.</p>}
       {projectWindow === "overdue" && !view.data.item.submission && <p className={styles.notice}>마감이 지났습니다. 지금 제출하면 지각 제출로 기록됩니다.</p>}
 
-      <div className={styles.reviewNote}><strong>프로젝트명</strong><p>{view.data.item.assignment.title}</p></div>
-      <label className={styles.field}>간단한 설명 <span className={styles.secondary}>선택</span>
-        <textarea value={draft.summary} disabled={locked} onChange={(event) => update("summary", event.target.value)} maxLength={4000} rows={4} />
-      </label>
-      <label className={styles.field}>보고서 · Markdown (.md)
-        <input
-          type="file"
-          accept=".md,text/markdown,text/plain"
-          disabled={locked || readingFile}
-          onChange={(event) => void selectReport(event.target.files?.[0])}
+      <section className={styles.reportComposer}>
+        <div className={styles.reportComposerHeader}>
+          <div>
+            <span className={styles.scheduleCategory}>ProjectDB 템플릿</span>
+            <h2>보고서 작성</h2>
+            <p className={styles.helper}>프로젝트명, 제출자/팀, 활동 기간은 자동으로 채웠습니다. 아래 템플릿의 빈 부분만 작성하면 됩니다.</p>
+          </div>
+          <div className={styles.actions}>
+            {!readonly && <button className={styles.smallButton} type="button" disabled={locked} onClick={applyTemplate}>템플릿 다시 적용</button>}
+            <button className={styles.smallButton} type="button" onClick={downloadTemplate}>템플릿 다운로드</button>
+            {!readonly && <label className={styles.smallButton} aria-disabled={locked || readingFile}>
+              {readingFile ? "불러오는 중…" : "기존 .md 불러오기"}
+              <input
+                className={styles.srOnly}
+                type="file"
+                accept=".md,text/markdown,text/plain"
+                disabled={locked || readingFile}
+                onChange={(event) => void selectReport(event.target.files?.[0])}
+              />
+            </label>}
+          </div>
+        </div>
+        <textarea
+          className={styles.markdownEditor}
+          aria-label="프로젝트 보고서 Markdown 편집기"
+          value={draft.report_markdown}
+          disabled={locked}
+          onChange={(event) => updateReport(event.target.value)}
+          rows={28}
+          spellCheck={false}
         />
-        <span className={styles.helper}>YAML frontmatter는 작성하지 않아도 됩니다. ASC_WEB이 승인 시 자동 생성합니다. 최대 256 KiB.</span>
-      </label>
-      {draft.report_filename && <div className={styles.reviewNote}>
-        <strong>선택한 보고서</strong>
-        <p>{draft.report_filename}{reportBytes ? ` · ${reportBytes.toLocaleString("ko-KR")} bytes` : ""}</p>
-      </div>}
-      <label className={styles.field}>코드 GitHub 저장소 <span className={styles.secondary}>선택</span>
-        <input value={draft.code_repository_url} disabled={locked} onChange={(event) => update("code_repository_url", event.target.value)} placeholder="https://github.com/owner/repo" />
-      </label>
+        <div className={styles.reportMeta}>
+          <span>{draft.report_filename || "report.md"}</span>
+          <span>{reportBytes ? `${reportBytes.toLocaleString("ko-KR")} bytes` : "작성 내용을 확인해 주세요"} · 최대 256 KiB</span>
+        </div>
+        <p className={styles.helper}>YAML frontmatter, ProjectDB 경로, commit SHA는 작성하지 않아도 됩니다. 승인 시 ASC_WEB이 회원/팀 정보로 안전하게 자동 생성합니다.</p>
+      </section>
+
+      <details className={styles.optionalDetails}>
+        <summary>추가 정보 <span>선택</span></summary>
+        <div className={styles.optionalDetailsBody}>
+          <label className={styles.field}>운영진에게 남길 간단한 설명 <span className={styles.secondary}>선택</span>
+            <textarea value={draft.summary} disabled={locked} onChange={(event) => update("summary", event.target.value)} maxLength={4000} rows={3} />
+          </label>
+          <label className={styles.field}>코드 GitHub 저장소 <span className={styles.secondary}>선택</span>
+            <input value={draft.code_repository_url} disabled={locked} onChange={(event) => update("code_repository_url", event.target.value)} placeholder="https://github.com/owner/repo" />
+          </label>
+        </div>
+      </details>
 
       {view.data.item.assignment.project_type === "team" && view.data.team && <section className={styles.teamBox}>
         <h2>팀 구성</h2>
